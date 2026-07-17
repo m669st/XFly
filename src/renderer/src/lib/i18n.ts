@@ -37,6 +37,7 @@ const en = {
     notOwned: "You don't own {game}. Buy it or check your Game Pass tier to play.",
     notOwnedGeneric: "You don't own this game.",
     showAll: "Show all",
+    leavingSoon: "Leaving soon",
     count: '{n} games',
   },
   edition: {
@@ -148,6 +149,7 @@ const tr: Strings = {
     notOwned: "{game} sende yok. Oynamak için satın al ya da Game Pass seviyeni kontrol et.",
     notOwnedGeneric: "Bu oyuna sahip değilsin.",
     showAll: "Tümünü gör",
+    leavingSoon: "Yakında kalkıyor",
     count: '{n} oyun',
   },
   edition: {
@@ -241,6 +243,7 @@ const de: Strings = {
     notOwned: "{game} gehört dir nicht. Kaufe es oder prüfe deine Game-Pass-Stufe.",
     notOwnedGeneric: "Dieses Spiel gehört dir nicht.",
     showAll: "Alle anzeigen",
+    leavingSoon: "Bald nicht mehr dabei",
     count: '{n} Spiele',
   },
   edition: {
@@ -335,6 +338,7 @@ const fr: Strings = {
     notOwned: "{game} ne t'appartient pas. Achète-le ou vérifie ton niveau Game Pass.",
     notOwnedGeneric: "Tu ne possèdes pas ce jeu.",
     showAll: "Tout voir",
+    leavingSoon: "Bientôt retirés",
     count: '{n} jeux',
   },
   edition: {
@@ -429,6 +433,7 @@ const es: Strings = {
     notOwned: "No tienes {game}. Cómpralo o revisa tu nivel de Game Pass para jugar.",
     notOwnedGeneric: "No tienes este juego.",
     showAll: "Ver todo",
+    leavingSoon: "Se van pronto",
     count: '{n} juegos',
   },
   edition: {
@@ -523,6 +528,7 @@ const it: Strings = {
     notOwned: "{game} non è tuo. Acquistalo o controlla il tuo livello Game Pass.",
     notOwnedGeneric: "Non possiedi questo gioco.",
     showAll: "Mostra tutto",
+    leavingSoon: "In uscita a breve",
     count: '{n} giochi',
   },
   edition: {
@@ -617,6 +623,7 @@ const ptBR: Strings = {
     notOwned: "Você não tem {game}. Compre ou verifique seu nível de Game Pass.",
     notOwnedGeneric: "Você não tem este jogo.",
     showAll: "Ver tudo",
+    leavingSoon: "Saindo em breve",
     count: '{n} jogos',
   },
   edition: {
@@ -711,6 +718,7 @@ const ru: Strings = {
     notOwned: "У тебя нет {game}. Купи игру или проверь уровень Game Pass.",
     notOwnedGeneric: "У тебя нет этой игры.",
     showAll: "Показать все",
+    leavingSoon: "Скоро уходят",
     count: 'Игр: {n}',
   },
   edition: {
@@ -805,6 +813,7 @@ const ja: Strings = {
     notOwned: "{game} を所有していません。購入するか Game Pass の種類を確認してください。",
     notOwnedGeneric: "このゲームを所有していません。",
     showAll: "すべて表示",
+    leavingSoon: "まもなく終了",
     count: '{n} 本',
   },
   edition: {
@@ -898,6 +907,7 @@ const zhCN: Strings = {
     notOwned: "你没有 {game}。购买它或检查你的 Game Pass 等级即可游玩。",
     notOwnedGeneric: "你没有这款游戏。",
     showAll: "查看全部",
+    leavingSoon: "即将下架",
     count: '{n} 款游戏',
   },
   edition: {

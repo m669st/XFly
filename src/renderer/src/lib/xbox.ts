@@ -92,6 +92,9 @@ export const STORE_COLLECTIONS = [
  */
 export const SYOG_COLLECTION = 'e4c1d680-2c70-45e4-a38d-8a292c68c700'
 
+/** Games about to leave Game Pass — worth surfacing so they are not missed. */
+export const LEAVING_SOON_COLLECTION = '393f05bf-e596-4ef6-9487-6d4fa0eab987'
+
 /**
  * The games xCloud lists as playing natively with a keyboard and mouse. Most cloud
  * titles expect a pad and only fake keyboard support; this is the shortlist that

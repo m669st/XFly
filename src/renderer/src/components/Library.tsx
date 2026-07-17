@@ -7,7 +7,14 @@ import { EditionPicker } from './EditionPicker'
 import { t, fmt } from '../lib/i18n'
 import { Osc } from './Osc'
 import { useFocus, FocusContext, setFocus } from '../lib/focus'
-import { STORE_COLLECTIONS, SYOG_COLLECTION, loadCollection, groupEditions, type Collection } from '../lib/xbox'
+import {
+  STORE_COLLECTIONS,
+  SYOG_COLLECTION,
+  LEAVING_SOON_COLLECTION,
+  loadCollection,
+  groupEditions,
+  type Collection,
+} from '../lib/xbox'
 
 // The synthetic "all games" shelf, distinct from any real collection id.
 const ALL_ID = '__all__'
@@ -19,6 +26,7 @@ export function Library(): JSX.Element {
   const [q, setQ] = useState('')
   const [rows, setRows] = useState<Collection[]>([])
   const [syog, setSyog] = useState<Collection | null>(null)
+  const [leaving, setLeaving] = useState<Collection | null>(null)
   const [asking, setAsking] = useState<GameTile | null>(null)
   // The full-grid view a "Show all" opens onto. Null means the shelves are showing.
   const [detail, setDetail] = useState<{ title: string; tiles: GameTile[] } | null>(null)
@@ -47,7 +55,9 @@ export function Library(): JSX.Element {
       return
     }
     setDetail({ title: c.title, tiles: c.tiles })
-    const full = await loadCollection(c.id, 1000, c.id === syog?.id ? t.library.owned : undefined).catch(() => null)
+    const override =
+      c.id === syog?.id ? t.library.owned : c.id === leaving?.id ? t.library.leavingSoon : undefined
+    const full = await loadCollection(c.id, 1000, override).catch(() => null)
     if (full) setDetail({ title: c.title, tiles: full.tiles })
   }
 
@@ -57,6 +67,9 @@ export function Library(): JSX.Element {
     // shelf never renders. Either way it is asked for before the catalogue rows.
     void loadCollection(SYOG_COLLECTION, 24, t.library.owned)
       .then((c) => live && setSyog(c))
+      .catch(() => {})
+    void loadCollection(LEAVING_SOON_COLLECTION, 24, t.library.leavingSoon)
+      .then((c) => live && setLeaving(c))
       .catch(() => {})
     for (const id of STORE_COLLECTIONS) {
       void loadCollection(id)
@@ -140,7 +153,8 @@ export function Library(): JSX.Element {
           {ordered.map((c, i) => (
             <Row key={c.id} collection={c} index={i + (syog ? 1 : 0)} onPick={pick} onShowAll={showAll} />
           ))}
-          {allGames && <Row collection={allGames} index={ordered.length + 1} onPick={pick} onShowAll={showAll} />}
+          {leaving && <Row collection={leaving} index={ordered.length + 1} onPick={pick} onShowAll={showAll} warn />}
+          {allGames && <Row collection={allGames} index={ordered.length + 2} onPick={pick} onShowAll={showAll} />}
           {games.length === 0 && ordered.length === 0 && (
             <div className="py-24 text-center text-sm text-ink-3">{t.home.loadingLibrary}</div>
           )}
@@ -171,6 +185,7 @@ function Row({
   onPick,
   onShowAll,
   accent,
+  warn,
 }: {
   collection: Collection
   index: number
@@ -179,6 +194,8 @@ function Row({
   // The account's own shelf. Marked so it reads as "yours" rather than as one more
   // catalogue row it happens to sit above.
   accent?: boolean
+  // A shelf of things about to disappear. Amber so it reads as a deadline.
+  warn?: boolean
 }): JSX.Element {
   const { focusKey, props } = useFocus({
     focusKey: `ROW_${collection.id}`,
@@ -204,8 +221,14 @@ function Row({
               <path d="M2 4.5h12M2 8h12M2 11.5h7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
             </svg>
           )}
+          {warn && (
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" className="text-amber-400" aria-hidden="true">
+              <circle cx="8" cy="8" r="6.4" stroke="currentColor" strokeWidth="1.4" />
+              <path d="M8 4.8v3.6M8 10.8v.01" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+            </svg>
+          )}
           <div className="min-w-0">
-            <h2 className="font-display text-[15px] font-bold tracking-tight">{collection.title}</h2>
+            <h2 className={`font-display text-[15px] font-bold tracking-tight ${warn ? 'text-amber-300' : ''}`}>{collection.title}</h2>
             {collection.description && (
               <p className="mt-0.5 text-[12px] text-ink-3">{collection.description}</p>
             )}
