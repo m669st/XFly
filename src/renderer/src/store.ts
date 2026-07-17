@@ -49,6 +49,12 @@ interface AppState {
   settings: Record<string, unknown>
   streamState: 'idle' | 'loading' | 'starting' | 'playing' | 'ended'
 
+  /** The in-game menu. Opened from the pad, so it cannot live inside the component. */
+  hudOpen: boolean
+
+  /** Queue estimate for this launch, seconds. Null until the region answers. */
+  waitSeconds: number | null
+
   sessionState: string | null
 
   regions: Array<{ name: string; isDefault: boolean; baseUri: string }>
@@ -70,6 +76,9 @@ interface AppState {
   setRecent: (r: GameTile[]) => void
   setSettings: (s: Record<string, unknown>) => void
   setStreamState: (s: AppState['streamState']) => void
+  setHudOpen: (v: boolean) => void
+  toggleHud: () => void
+  setWaitSeconds: (v: number | null) => void
   setSessionState: (s: string | null) => void
   setRegions: (r: AppState['regions']) => void
   setLaunching: (t: GameTile | null) => void
@@ -86,6 +95,8 @@ export const useStore = create<AppState>((set) => ({
   recent: [],
   settings: {},
   streamState: 'idle',
+  hudOpen: false,
+  waitSeconds: null,
   sessionState: null,
   regions: [],
   launching: null,
@@ -124,7 +135,18 @@ export const useStore = create<AppState>((set) => ({
     }),
   setRecent: (recent) => set({ recent }),
   setSettings: (settings) => set({ settings }),
-  setStreamState: (streamState) => set({ streamState, ...(streamState === 'playing' ? { sessionState: null } : {}) }),
+  setStreamState: (streamState) =>
+    set({
+      streamState,
+      ...(streamState === 'playing' ? { sessionState: null } : {}),
+      // A menu for a stream that has ended has nothing left to act on.
+      ...(streamState === 'idle' || streamState === 'ended' ? { hudOpen: false } : {}),
+      // The estimate belongs to one launch only.
+      ...(streamState === 'playing' || streamState === 'idle' || streamState === 'ended' ? { waitSeconds: null } : {}),
+    }),
+  setHudOpen: (hudOpen) => set({ hudOpen }),
+  setWaitSeconds: (waitSeconds) => set({ waitSeconds }),
+  toggleHud: () => set((s) => ({ hudOpen: !s.hudOpen })),
   setSessionState: (sessionState) => set({ sessionState }),
   setRegions: (regions) => set({ regions }),
   setLaunching: (launching) => set({ launching }),

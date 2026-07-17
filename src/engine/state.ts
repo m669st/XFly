@@ -10,6 +10,24 @@ export const engine = {
 
   gsToken: '',
 
+  /**
+   * The live session's own URL, from the play response.
+   *
+   * Leaving the page does not end a cloud session — the console stays allocated and
+   * keeps streaming until it times out. Quitting for real means DELETEing this.
+   */
+  sessionUrl: '',
+
+  /**
+   * The Authorization header the page itself uses on this session.
+   *
+   * Not the same thing as gsToken: every login/user call mints a new one and
+   * overwrites ours, so by the time the user quits, the token we hold is not the
+   * token that opened the session — and the DELETE comes back 401. This is copied
+   * from the page's own session traffic, which by definition still works.
+   */
+  sessionAuth: '',
+
   regions: [] as OfferedRegion[],
 
   launcherVisible: true,

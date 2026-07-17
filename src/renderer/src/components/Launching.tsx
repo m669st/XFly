@@ -38,10 +38,13 @@ export function Launching(): JSX.Element {
   const queued = sessionState === 'WaitingForResources' || sessionState === 'Queued'
 
   return (
+    // Opaque from the first frame. Fading this in left the overlay see-through for
+    // a fifth of a second, and what showed through was xCloud's own launch screen —
+    // the Xbox flash between pressing play and the game appearing. The contents
+    // below still ease in; only the backdrop is instant.
     <motion.div
-      initial={{ opacity: 0 }}
+      initial={{ opacity: 1 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.22, ease: 'easeOut' }}
       className="pointer-events-auto absolute inset-0 overflow-hidden bg-void"
     >
       {(game?.hero || game?.art) && (
@@ -89,6 +92,8 @@ export function Launching(): JSX.Element {
 
         <Steps active={active} />
 
+        <WaitTime />
+
         <AnimatePresence>
           {queued && (
             <motion.p
@@ -102,9 +107,79 @@ export function Launching(): JSX.Element {
           )}
         </AnimatePresence>
 
+        <Hint />
         <Cancel />
+        <MenuTip />
       </motion.div>
     </motion.div>
+  )
+}
+
+/**
+ * What the region said this launch would take.
+ *
+ * The number was already being fetched for every region on every launch and only
+ * ever reached the log. Here it answers the question the loading screen raises:
+ * how long is this going to sit there.
+ */
+function WaitTime(): JSX.Element | null {
+  const seconds = useStore((s) => s.waitSeconds)
+  if (seconds == null) return null
+
+  const label =
+    seconds >= 90 ? `~${Math.round(seconds / 60)} ${t.launch.waitMinutes}` : `~${seconds}${t.launch.waitSeconds}`
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
+      className="font-mono text-[11px] uppercase tracking-[0.14em] text-white/40"
+    >
+      {t.launch.waitEstimate} {label}
+    </motion.div>
+  )
+}
+
+/**
+ * Something to read while the console wakes up.
+ *
+ * One per launch, picked on mount and left alone — a line that swaps under you
+ * while you are halfway through it is worse than no line at all.
+ */
+function Hint(): JSX.Element | null {
+  const [line] = useState(() => t.launch.hints[Math.floor(Math.random() * t.launch.hints.length)])
+  if (!line) return null
+
+  return (
+    <motion.p
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.6, delay: 0.5 }}
+      className="max-w-md text-center text-[12.5px] italic leading-relaxed text-white/30"
+    >
+      {line}
+    </motion.p>
+  )
+}
+
+/** The way back out, shown where the player is already looking. */
+function MenuTip(): JSX.Element {
+  return (
+    <div className="mt-1 flex items-center gap-2 text-[11px] text-white/25">
+      <Chip>View</Chip>
+      <span>+</span>
+      <Chip>Menu</Chip>
+      <span className="ml-0.5">{t.hud.menuHint}</span>
+    </div>
+  )
+}
+
+function Chip({ children }: { children: React.ReactNode }): JSX.Element {
+  return (
+    <span className="grid h-[15px] min-w-[15px] place-items-center rounded bg-white/[0.08] px-1 font-mono text-[9px] text-white/50">
+      {children}
+    </span>
   )
 }
 

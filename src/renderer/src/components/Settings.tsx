@@ -161,13 +161,17 @@ function Row({
   hint,
   children,
   onArrow,
+  onEnter,
 }: {
   label: string
   hint?: string
   children: React.ReactNode
   onArrow?: (dir: string) => boolean
+  // A row whose control does something on A. Without it the row takes focus, the
+  // button inside it never does, and the pad has no way to press it.
+  onEnter?: () => void
 }): JSX.Element {
-  const { focused, props } = useFocus({ onArrowPress: onArrow })
+  const { focused, props } = useFocus({ onArrowPress: onArrow, onEnterPress: onEnter })
   return (
     <div
       {...props}
@@ -431,38 +435,44 @@ function Emphasise({ text, bold, className }: { text: string; bold: string; clas
 
 function Diagnostics(): JSX.Element {
   const [copied, setCopied] = useState(false)
+
+  const copy = async (): Promise<void> => {
+    await navigator.clipboard.writeText(await window.xfly.dumpLog())
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+  const openRecording = (): void => window.xfly.openRecording()
+
+  // One row per action. Two buttons sharing a row meant the second one had nothing
+  // to give it focus, so a pad could never reach it.
   return (
-    <Row label={t.settings.diagnostics} hint={t.settings.diagnosticsHint}>
-      <div className="flex gap-2">
-        <Btn
-          label={copied ? t.settings.copied : t.settings.errorLog}
-          onPress={async () => {
-            await navigator.clipboard.writeText(await window.xfly.dumpLog())
-            setCopied(true)
-            setTimeout(() => setCopied(false), 2000)
-          }}
-        />
-        <Btn label={t.settings.recordFile} onPress={() => window.xfly.openRecording()} />
-      </div>
+    <>
+    <Row label={t.settings.diagnostics} hint={t.settings.diagnosticsHint} onEnter={copy}>
+      <Btn label={copied ? t.settings.copied : t.settings.errorLog} onPress={copy} />
     </Row>
+    <Row label={t.settings.recordFile} onEnter={openRecording}>
+      <Btn label="→" onPress={openRecording} />
+    </Row>
+    </>
   )
 }
 
 function Quit(): JSX.Element {
+  const quit = (): void => window.xfly.close()
   return (
-    <Row label={t.settings.quit}>
-      <Btn label={t.settings.quitButton} danger onPress={() => window.xfly.close()} />
+    <Row label={t.settings.quit} onEnter={quit}>
+      <Btn label={t.settings.quitButton} danger onPress={quit} />
     </Row>
   )
 }
 
+// Not focusable on purpose: the Row around it is. Two nested focus targets and the
+// pad lands on the outer one, which is exactly how this button became unreachable.
 function Btn({ label, onPress, danger }: { label: string; onPress: () => void; danger?: boolean }): JSX.Element {
-  const { props } = useFocus({ onEnterPress: onPress })
   return (
     <button
-      {...props}
       onClick={onPress}
-      className={`focusable rounded-lg px-3.5 py-2 text-[12px] font-semibold transition ${
+      className={`rounded-lg px-3.5 py-2 text-[12px] font-semibold transition ${
         danger ? 'bg-red-500/80 text-white hover:bg-red-500' : 'bg-white/[0.08] text-white hover:bg-white/[0.16]'
       }`}
     >

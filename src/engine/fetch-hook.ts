@@ -3,6 +3,14 @@ import { rec, redactText, headersToObject } from './record'
 import { wantedAlias } from './datachannel'
 import { OS_NAME, pickStreamLocale } from '../shared/constants'
 
+/** Where the page reports on the player. None of it is needed to stream a game. */
+const BLOCKED_HOSTS = [
+  'https://arc.msn.com',
+  'https://browser.events.data.microsoft.com',
+  'https://dc.services.visualstudio.com',
+  'https://mscom.demdex.net',
+]
+
 export function patchFetch(): void {
   const native = window.fetch
   if ((native as any).__xfly) return
@@ -10,6 +18,28 @@ export function patchFetch(): void {
   const patched: typeof fetch = async function (input: RequestInfo | URL, init?: RequestInit) {
     const url = typeof input === 'string' ? input : input instanceof URL ? input.href : (input as Request).url
     const method = (init?.method || (input instanceof Request ? input.method : 'GET') || 'GET').toUpperCase()
+
+    // Reporting endpoints. Silencing the telemetry provider stops the page asking, but
+    // these are called from elsewhere too, so the door is shut here as well. Answered
+    // rather than rejected: a caller that throws on a failed beacon is a caller that
+    // breaks the page over something nobody needed.
+    for (const host of BLOCKED_HOSTS) {
+      if (url.startsWith(host)) {
+        return new Response('{}', { status: 200, statusText: 'OK' })
+      }
+    }
+
+    // Every call the page makes against a live session carries a header that works.
+    // Keep the last one: it is what lets us delete the session on the way out.
+    if (/\/sessions\/cloud\/[0-9a-f-]{36}/i.test(url)) {
+      try {
+        const h = input instanceof Request ? new Headers(input.headers) : new Headers(init?.headers)
+        const auth = h.get('Authorization')
+        if (auth) engine.sessionAuth = auth
+      } catch {
+        /* nothing to learn from this one */
+      }
+    }
 
     if (/\/sessions\/cloud\/play$/.test(url) && method === 'POST') {
       try {
@@ -36,6 +66,22 @@ export function patchFetch(): void {
           const spoofed = await native(new Request(req, { headers, body: JSON.stringify(body) }))
           diag('session', `POST /sessions/cloud/play (osName=${osName}) -> ${spoofed.status}`)
           if (spoofed.ok) {
+            // Where this session lives, so we can delete it later. Without it, quitting
+            // only walks the page back and the console keeps running.
+            try {
+              const path = (await spoofed.clone().json())?.sessionPath
+              if (path) {
+                // sessionPath comes back without a leading slash ("v5/sessions/cloud/<id>").
+                // Resolving that against the play URL nests it under the directory the
+                // play call lives in — /v5/sessions/cloud/v5/sessions/cloud/<id> — which
+                // 404s, leaving the console allocated. Anchor it to the origin instead.
+                engine.sessionUrl = `${new URL(url).origin}/${String(path).replace(/^\/+/, '')}`
+                emit({ type: 'session.play', titleId: body.titleId || '', sessionPath: path })
+                diag('session', `session at ${String(path).replace(/[0-9A-F-]{36}/i, '<session>')}`)
+              }
+            } catch {
+              /* no sessionPath in the body — quit falls back to leaving the page */
+            }
             rec('http', {
               method,
               url: url.replace(/[0-9A-F-]{36}/i, '<session>'),
@@ -273,6 +319,9 @@ async function probeWaitTimes(titleId: string, native: typeof fetch): Promise<vo
         const j = await resp.json()
         const secs = j?.estimatedTotalWaitTimeInSeconds ?? j?.estimatedProvisioningTimeInSeconds
         rec('waittime', { region: regionCode(r), body: j })
+        // Only the region we are actually playing on is worth telling the user about;
+        // the rest are here to make the log worth reading.
+        if (r.isDefault && typeof secs === 'number') emit({ type: 'waittime', seconds: secs })
         return `${regionCode(r)}=${secs ?? JSON.stringify(j)}s${r.isDefault ? '*' : ''}`
       } catch {
         return `${regionCode(r)}=err`

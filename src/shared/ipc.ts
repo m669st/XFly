@@ -61,6 +61,10 @@ export type EngineEvent =
   | { type: 'sdp'; kind: 'offer' | 'answer'; sdp: string }
   | { type: 'ice'; candidates: string[] }
   | { type: 'log'; level: 'info' | 'warn' | 'error'; msg: string }
+  /** View + Menu on the pad, pressed inside the stream. */
+  | { type: 'menu.toggle' }
+  /** Queue estimate for the region we are launching on, in seconds. */
+  | { type: 'waittime'; seconds: number }
 
 export interface StreamStats {
   t: number

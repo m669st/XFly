@@ -92,6 +92,13 @@ export function registerIpc(win: XFlyWindow): void {
   ipcMain.on(IPC.engineEvent, (_e, event) => {
     win.overlay.webContents.send(IPC.engineEvent, event)
     if (event?.type === 'log') diagWrite('engine', String(event.msg))
+    // The pad's way in and out of our own menu. Showing the overlay is also what
+    // makes the xbox page go blind to the controller, so the game cannot be played
+    // through the menu sitting on top of it.
+    else if (event?.type === 'menu.toggle') {
+      if (win.isOverlayVisible) win.hideOverlay(true, 'menu closed from the pad')
+      else win.showOverlay('menu opened from the pad')
+    }
     else if (event?.type === 'stream.state') diagWrite('state', String(event.state))
     // The session answering at all means it is alive. It may be sitting in xCloud's
     // queue (WaitingForResources) for minutes — measured at 107 seconds, after which

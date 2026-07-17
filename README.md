@@ -29,7 +29,7 @@ without a website in the way. It signs you in with your Microsoft account and th
 
 <img src="docs/icons/sharp.svg" width="42" height="42">
 
-## AI Upscaling
+## Picture quality
 
 ### 1440p in. 4K out.
 
@@ -43,8 +43,9 @@ Video Super Resolution sitting there, and XFly gets out of the driver's way so i
 the stream. Your card rebuilds each frame up to your screen's real resolution while you play, on
 hardware that's idle anyway, so it costs no frames. A 4K monitor gets a 4K picture at a full 60fps.
 
-**AMD's Video Upscale is supported too, and untested.** It's wired up the same way, but nobody has
-tried it yet — see [Getting the best picture](#getting-the-best-picture). If you have a Radeon,
+**AMD's Video Upscale is supported too, and untested.** Everything XFly can do for it is done, but
+it asks for two switches of its own and nobody has run it on a Radeon yet — see
+[Getting the best picture](#getting-the-best-picture). If you have one,
 [we'd like to hear what it does](../../issues).
 
 <div align="center">
@@ -55,6 +56,10 @@ tried it yet — see [Getting the best picture](#getting-the-best-picture). If y
 | **What you see on a 4K screen** | 1440p, stretched | rebuilt to 4K, by your GPU |
 | **Frame rate** | 60fps | 60fps — the upscale is free |
 | **On a bad night** | blocking, smearing | cleaned before it's scaled |
+
+<br>
+
+<img src="screenshots/ingame.png" alt="XFly in-game, with RTX VSR and with the XFly upscaler" width="820">
 
 </div>
 
@@ -100,7 +105,8 @@ Not on Microsoft's list? It still works.
 
 ### <img src="docs/icons/controller.svg" width="18" height="18"> Controller only
 
-Every screen, every menu. You'll never reach for the mouse.
+Every screen, every menu — searching your library included. You'll never reach for the
+mouse, and never need a keyboard.
 
 </td><td width="50%" valign="top">
 
@@ -120,6 +126,13 @@ Ten of them. Nothing to configure.
 ### <img src="docs/icons/noweb.svg" width="18" height="18"> No website
 
 Your game fills the screen. That's the whole thing.
+
+</td></tr>
+<tr><td colspan="2" valign="top">
+
+### <img src="docs/icons/controller.svg" width="18" height="18"> A menu inside the game
+
+Press **View + Menu** on your controller while you play. Quit from there.
 
 </td></tr>
 </table>
@@ -204,13 +217,19 @@ Open **Settings → Video** once and try the **Video enhancer** options.
 | If you have | Pick | Then |
 |---|---|---|
 | NVIDIA RTX (20 series or newer) | **NVIDIA RTX** | Turn on Super Resolution in the NVIDIA app — XFly tells you where |
-| AMD Radeon RX 7000 / 9000 | **AMD Radeon** | Turn on Video Upscale in AMD Adrenalin. **Untested** — see below |
+| AMD Radeon RX 7000 / 9000 | **AMD Radeon** | Two switches — see below. **Untested** |
 | Anything else | **XFly** | Nothing. It does the cleanup itself |
 
-> **On the AMD option:** it is built the same way as the NVIDIA one and should behave the same, but it
-> has never actually been run — there's no Radeon here to try it on. AMD documents Video Upscale for
-> the RX 7000 series; RX 9000 is included because it's newer silicon, which is a reasonable guess and
-> not a tested fact. If you have either, please [tell us what happens](../../issues) — working or not.
+> **On the AMD option:** unlike NVIDIA's, AMD's upscaler needs two things turned on outside XFly,
+> and it stays silent until both are:
+>
+> 1. **Adrenalin** → Gaming → Graphics → **Video Upscale**
+> 2. **Windows Settings** → Apps → Video playback → **Process video automatically to enhance it**
+>
+> XFly does its part on its own. Beyond that it has never actually been run on a Radeon — there
+> isn't one here to try it on. AMD documents Video Upscale for the RX 7000 series; RX 9000 is
+> included because it's newer silicon, which is a reasonable guess and not a tested fact. If you
+> have either, please [tell us what happens](../../issues) — working or not.
 
 ---
 

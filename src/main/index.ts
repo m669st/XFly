@@ -13,7 +13,15 @@ import { initUpdater } from './updater'
 
 
 
-app.commandLine.appendSwitch('enable-features', 'WebGPU,CanvasOopRasterization')
+// MediaFoundationClearPlayback routes video through MediaFoundationRenderer instead
+// of Chromium's own path. AMD's Video Upscale only engages on that renderer; NVIDIA's
+// VSR lives in Chromium's D3D11 path and needs nothing. Chromium ships this one
+// disabled and calls it test-only, so it stays here only as long as RTX VSR is proven
+// to survive it.
+app.commandLine.appendSwitch(
+  'enable-features',
+  'WebGPU,CanvasOopRasterization,MediaFoundationClearPlayback',
+)
 app.commandLine.appendSwitch('enable-zero-copy')
 app.commandLine.appendSwitch('ignore-gpu-blocklist')
 app.commandLine.appendSwitch('enable-accelerated-video-decode')

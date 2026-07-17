@@ -1,10 +1,24 @@
 import { engine, diag } from './state'
 
+let nativeGetGamepads: (() => (Gamepad | null)[]) | null = null
+
+/**
+ * The unfiltered getGamepads.
+ *
+ * gateGamepads() replaces the global one with a version that returns nothing while
+ * our launcher is up — which is what keeps the xbox page from reading the pad
+ * behind our menu. The shortcut that opens that menu has to keep seeing the pad
+ * anyway, or it could open the menu and never close it.
+ */
+export function rawGamepads(): (Gamepad | null)[] {
+  return nativeGetGamepads ? nativeGetGamepads() : []
+}
 
 export function gateGamepads(): void {
   const nav = navigator as Navigator & { webkitGetGamepads?: () => (Gamepad | null)[] }
   const native = nav.getGamepads?.bind(nav)
   if (!native) return
+  nativeGetGamepads = native
 
   const blocked = (): boolean => engine.launcherVisible
 

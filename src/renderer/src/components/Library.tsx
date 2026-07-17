@@ -5,7 +5,8 @@ import { GameCard } from './GameCard'
 import { Screen } from './Screen'
 import { EditionPicker } from './EditionPicker'
 import { t, fmt } from '../lib/i18n'
-import { useFocus, FocusContext } from '../lib/focus'
+import { Osc } from './Osc'
+import { useFocus, FocusContext, setFocus } from '../lib/focus'
 import { STORE_COLLECTIONS, loadCollection, groupEditions, type Collection } from '../lib/xbox'
 
 export function Library(): JSX.Element {
@@ -32,6 +33,8 @@ export function Library(): JSX.Element {
     }
   }, [])
 
+  const [osc, setOsc] = useState(false)
+
   const filtered = useMemo(
     () => (q ? games.filter((t) => t.title.toLowerCase().includes(q.toLowerCase())) : []),
     [games, q],
@@ -52,10 +55,11 @@ export function Library(): JSX.Element {
   )
 
   return (
+    <>
     <Screen
       title={t.nav.library}
       count={games.length ? fmt(t.library.count, { n: games.length }) : undefined}
-      actions={<Search value={q} onChange={setQ} />}
+      actions={<Search value={q} onChange={setQ} onOpen={() => setOsc(true)} />}
     >
       <AnimatePresence>
         {asking && (
@@ -94,6 +98,21 @@ export function Library(): JSX.Element {
         </div>
       )}
     </Screen>
+
+    {osc && (
+      <Osc
+        value={q}
+        onChange={setQ}
+        onClose={() => {
+          setOsc(false)
+          // Hand focus back by name. The keys the pad was standing on are about to
+          // unmount, and spatial navigation has nowhere to fall back to — the whole
+          // screen goes unselectable until something claims focus again.
+          setFocus('LIBRARY_SEARCH_BOX')
+        }}
+      />
+    )}
+    </>
   )
 }
 
@@ -188,8 +207,18 @@ function Grid({
   )
 }
 
-function Search({ value, onChange }: { value: string; onChange: (v: string) => void }): JSX.Element {
+function Search({
+  value,
+  onChange,
+  onOpen,
+}: {
+  value: string
+  onChange: (v: string) => void
+  // A pad has no keys. Pressing A here brings up ones it can reach.
+  onOpen: () => void
+}): JSX.Element {
   const input = useRef<HTMLInputElement>(null)
+  const { props, focused } = useFocus({ focusKey: 'LIBRARY_SEARCH_BOX', onEnterPress: onOpen })
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
@@ -202,7 +231,13 @@ function Search({ value, onChange }: { value: string; onChange: (v: string) => v
   }, [])
 
   return (
-    <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-4 py-2">
+    <div
+      {...props}
+      onClick={onOpen}
+      className={`focusable flex items-center gap-2 rounded-full border px-4 py-2 transition ${
+        focused ? 'border-velocity bg-xbox/[0.13]' : 'border-white/10 bg-white/[0.05]'
+      }`}
+    >
       <span className="text-ink-3">⌕</span>
       <input
         ref={input}

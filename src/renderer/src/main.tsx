@@ -31,6 +31,8 @@ function connect(): void {
   window.xfly.onEngineEvent((ev: any) => {
     if (!ev) return
     if (ev.type === 'stream.state') useStore.getState().setStreamState(ev.state)
+    else if (ev.type === 'menu.toggle') useStore.getState().toggleHud()
+    else if (ev.type === 'waittime') useStore.getState().setWaitSeconds(ev.seconds)
     else if (ev.type === 'session.state') useStore.getState().setSessionState(ev.state)
     else if (ev.type === 'regions' && Array.isArray(ev.regions)) useStore.getState().setRegions(ev.regions)
     else if (ev.type === 'stream.stats') useStore.getState().setStats(ev.stats)

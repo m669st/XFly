@@ -24,6 +24,7 @@
 
 import { ipcRenderer } from 'electron'
 import { IPC, type EngineCommand } from '../shared/ipc'
+import { XBOX_PLAY_URL } from '../shared/constants'
 import { engine, log, diag, emit } from './state'
 import { rec } from './record'
 import { requestResolution, requestBitrate, wantedAlias, onControlReady } from './datachannel'
@@ -32,8 +33,11 @@ import { patchFetch } from './fetch-hook'
 import { upscaler } from './upscale'
 import { hideXboxChrome } from './chrome'
 import { gateGamepads, announceGamepads } from './gamepad-gate'
+import { watchMenuShortcut } from './shortcut'
+import { skipSplashVideo } from './splash'
 import { installPatcher } from './patcher'
 import './local-coop'
+import './telemetry'
 import { harvestTokens } from './tokens'
 import { autoSignIn } from './signin'
 import { launchTitle } from './launch'
@@ -46,16 +50,29 @@ if (!IS_XBOX) {
 }
 
 if (IS_XBOX) {
+  // Before the page has painted a single frame.
+  //
+  // This used to wait for DOMContentLoaded, which is late enough for xbox.com to
+  // draw its own furniture first — the cookie bar flashing across the top of an
+  // otherwise black screen between pressing play and the game arriving was this.
+  // The stylesheet only ever hides things, so it is safe to apply on the default
+  // and let the settings below turn it back off in the rare case it is unwanted.
+  hideXboxChrome()
 
   ipcRenderer
     .invoke(IPC.settingsAll)
-    .then((s) => Object.assign(engine.settings, s || {}))
+    .then((s) => {
+      Object.assign(engine.settings, s || {})
+      if (engine.settings.hideXboxChrome === false) document.getElementById('xfly-chrome')?.remove()
+    })
     .catch(() => {})
 
 
   try {
     patchFetch()
     patchRtcPeerConnection()
+    // Before anything can ask the intro clip to play.
+    skipSplashVideo()
 
 
     gateGamepads()
@@ -82,7 +99,7 @@ if (IS_XBOX)
       engine.settings.claritySharpen = cmd.sharpen
       upscaler.apply()
     } else if (cmd.type === 'disconnect') {
-      window.history.back()
+      void endSession()
     } else if (cmd.type === 'signIn') {
       autoSignIn()
     } else if (cmd.type === 'launch') {
@@ -101,11 +118,46 @@ if (IS_XBOX)
 })
 
 
+/**
+ * Quit for real.
+ *
+ * history.back() was not quitting anything: it walked the page back to /play, the
+ * SPA restored the launch route it had just come from, and the session carried on
+ * streaming at full bitrate on a console nobody was watching. xCloud's own quit
+ * button deletes the session, so we do that first and only then leave — by
+ * assigning the URL, because going back lands on the launch route again.
+ */
+async function endSession(): Promise<void> {
+  const url = engine.sessionUrl
+  const auth = engine.sessionAuth || (engine.gsToken ? `Bearer ${engine.gsToken}` : '')
+  engine.sessionUrl = ''
+  engine.sessionAuth = ''
+
+  if (url) {
+    try {
+      const res = await fetch(url, {
+        method: 'DELETE',
+        headers: auth ? { Authorization: auth } : {},
+      })
+      // The path, not just the status: a 404 here means the url was built wrong, and
+      // without seeing it that is indistinguishable from a session already gone.
+      diag('session', `DELETE ${new URL(url).pathname.replace(/[0-9A-F-]{36}/i, '<session>')} -> ${res.status}`)
+    } catch (e) {
+      // Losing the session is the server's problem now; it times out on its own.
+      diag('session', `DELETE session failed: ${e}`)
+    }
+  } else {
+    diag('session', 'quit with no session url — leaving the page only')
+  }
+
+  location.assign(XBOX_PLAY_URL)
+}
+
 function onReady(): void {
   if (!IS_XBOX) return
-  if (engine.settings.hideXboxChrome !== false) hideXboxChrome()
   harvestTokens()
   watchForVideo()
+  watchMenuShortcut()
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', onReady)
 else onReady()

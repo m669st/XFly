@@ -158,6 +158,7 @@ export function Home(): JSX.Element {
             <CornerButton label={t.nav.library} hint="LB" onPress={() => setView('library')} />
             <CornerButton label={t.nav.settings} hint="RB" onPress={() => setView('settings')} />
             {signedIn && <AccountChip onPress={() => setAccount(true)} />}
+            <QuitButton />
           </div>
         </header>
 
@@ -221,6 +222,35 @@ function Ambient({ rgb }: { rgb: string }): JSX.Element {
       className="pointer-events-none absolute inset-0"
       style={{ background: `radial-gradient(1100px 620px at 88% 22%, rgba(${rgb}, 0.30), transparent 66%)` }}
     />
+  )
+}
+
+/**
+ * The way out of XFly.
+ *
+ * It used to live at the bottom of Settings → Advanced, which is a strange place to
+ * put the one thing every session ends with. Up here it is where a window's close
+ * button would be, and a pad reaches it in the same breath as everything else.
+ */
+function QuitButton(): JSX.Element {
+  const quit = (): void => window.xfly.close()
+  const { props, focused } = useFocus({ focusKey: 'HOME_QUIT', onEnterPress: quit })
+
+  return (
+    <button
+      {...props}
+      onClick={quit}
+      aria-label={t.settings.quitButton}
+      className={`focusable grid h-[30px] w-[30px] place-items-center rounded-lg border transition ${
+        focused
+          ? 'border-red-400/70 bg-red-500/25 text-white'
+          : 'border-white/10 bg-white/[0.06] text-white/45 hover:text-white'
+      }`}
+    >
+      <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+        <path d="M2 2L10 10M10 2L2 10" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      </svg>
+    </button>
   )
 }
 
