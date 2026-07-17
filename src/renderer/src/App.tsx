@@ -9,7 +9,7 @@ import { Splash } from './components/Splash'
 import { Mark } from './components/Mark'
 import { useFocus, setFocus } from './lib/focus'
 import { t } from './lib/i18n'
-import { loadLibrary, loadRecent, loadProfile } from './lib/xbox'
+import { loadLibrary, loadRecent, loadProfile, loadMkbIds } from './lib/xbox'
 
 const BOOT_MAX_MS = 8_000
 
@@ -34,6 +34,7 @@ export default function App(): JSX.Element {
     void Promise.race([boot, giveUp]).then(() => useStore.getState().setBooted())
 
     loadLibrary((batch) => useStore.getState().mergeLibrary(batch)).catch(() => {})
+    loadMkbIds().then((ids) => ids.size && useStore.getState().setMkbIds(ids)).catch(() => {})
   }, [signedIn])
 
   const inGame = streamState === 'playing' || streamState === 'starting' || streamState === 'loading'
@@ -43,6 +44,7 @@ export default function App(): JSX.Element {
 
   return (
     <div className="relative h-full w-full">
+      <Toast />
       {inGame ? (
         <StreamHud />
       ) : !signedIn ? (
@@ -59,6 +61,25 @@ export default function App(): JSX.Element {
           </AnimatePresence>
         </div>
       )}
+    </div>
+  )
+}
+
+function Toast(): JSX.Element | null {
+  const toast = useStore((s) => s.toast)
+
+  useEffect(() => {
+    if (!toast) return
+    const id = setTimeout(() => useStore.getState().setToast(null), 5000)
+    return () => clearTimeout(id)
+  }, [toast])
+
+  if (!toast) return null
+  return (
+    <div className="pointer-events-none fixed inset-x-0 top-6 z-50 flex justify-center">
+      <div className="glass max-w-md rounded-xl border border-amber-500/40 px-5 py-3 text-center text-[13px] text-white animate-fadeIn">
+        {toast}
+      </div>
     </div>
   )
 }

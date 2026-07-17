@@ -7,7 +7,10 @@ import { EditionPicker } from './EditionPicker'
 import { t, fmt } from '../lib/i18n'
 import { Osc } from './Osc'
 import { useFocus, FocusContext, setFocus } from '../lib/focus'
-import { STORE_COLLECTIONS, loadCollection, groupEditions, type Collection } from '../lib/xbox'
+import { STORE_COLLECTIONS, SYOG_COLLECTION, loadCollection, groupEditions, type Collection } from '../lib/xbox'
+
+// The synthetic "all games" shelf, distinct from any real collection id.
+const ALL_ID = '__all__'
 
 export function Library(): JSX.Element {
   const library = useStore((s) => s.library)
@@ -15,12 +18,46 @@ export function Library(): JSX.Element {
   const setView = useStore((s) => s.setView)
   const [q, setQ] = useState('')
   const [rows, setRows] = useState<Collection[]>([])
+  const [syog, setSyog] = useState<Collection | null>(null)
   const [asking, setAsking] = useState<GameTile | null>(null)
+  // The full-grid view a "Show all" opens onto. Null means the shelves are showing.
+  const [detail, setDetail] = useState<{ title: string; tiles: GameTile[] } | null>(null)
 
   const games = useMemo(() => groupEditions(library), [library])
 
+  // In the detail grid, B goes back to the shelves rather than all the way home.
+  useEffect(() => {
+    if (!detail) return
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape' || e.key === 'Backspace') {
+        e.stopPropagation()
+        e.preventDefault()
+        setDetail(null)
+      }
+    }
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+  }, [detail])
+
+  const showAll = async (c: Collection): Promise<void> => {
+    // A row only holds its first slice. If the collection has more, fetch the rest
+    // before opening the grid so "Show all" actually shows all of it.
+    if (c.id === ALL_ID || c.total <= c.tiles.length) {
+      setDetail({ title: c.title, tiles: c.tiles })
+      return
+    }
+    setDetail({ title: c.title, tiles: c.tiles })
+    const full = await loadCollection(c.id, 1000, c.id === syog?.id ? t.library.owned : undefined).catch(() => null)
+    if (full) setDetail({ title: c.title, tiles: full.tiles })
+  }
+
   useEffect(() => {
     let live = true
+    // The account's own games first — it either fills or it returns null and the
+    // shelf never renders. Either way it is asked for before the catalogue rows.
+    void loadCollection(SYOG_COLLECTION, 24, t.library.owned)
+      .then((c) => live && setSyog(c))
+      .catch(() => {})
     for (const id of STORE_COLLECTIONS) {
       void loadCollection(id)
         .then((c) => {
@@ -54,12 +91,23 @@ export function Library(): JSX.Element {
     (r): r is Collection => !!r,
   )
 
+  // The whole library as one more shelf, so "All games" reads and behaves like every
+  // other row instead of an endless grid pinned to the bottom.
+  const allGames: Collection | null =
+    games.length > 0 ? { id: ALL_ID, title: t.library.allGames, tiles: games.slice(0, 24), total: games.length } : null
+
   return (
     <>
     <Screen
-      title={t.nav.library}
-      count={games.length ? fmt(t.library.count, { n: games.length }) : undefined}
-      actions={<Search value={q} onChange={setQ} onOpen={() => setOsc(true)} />}
+      title={detail ? detail.title : t.nav.library}
+      count={
+        detail
+          ? fmt(t.library.count, { n: detail.tiles.length })
+          : games.length
+            ? fmt(t.library.count, { n: games.length })
+            : undefined
+      }
+      actions={detail ? undefined : <Search value={q} onChange={setQ} onOpen={() => setOsc(true)} />}
     >
       <AnimatePresence>
         {asking && (
@@ -74,7 +122,12 @@ export function Library(): JSX.Element {
           />
         )}
       </AnimatePresence>
-      {q ? (
+      {detail ? (
+        <div className="flex flex-col gap-4">
+          <BackButton onPress={() => setDetail(null)} />
+          <Grid tiles={detail.tiles} focusKey="LIBRARY_DETAIL" onPick={pick} />
+        </div>
+      ) : q ? (
         <>
           <Grid tiles={filtered} focusKey="LIBRARY_SEARCH" onPick={pick} />
           {filtered.length === 0 && (
@@ -83,15 +136,11 @@ export function Library(): JSX.Element {
         </>
       ) : (
         <div className="flex flex-col gap-9">
+          {syog && <Row collection={syog} index={0} onPick={pick} onShowAll={showAll} accent />}
           {ordered.map((c, i) => (
-            <Row key={c.id} collection={c} index={i} onPick={pick} />
+            <Row key={c.id} collection={c} index={i + (syog ? 1 : 0)} onPick={pick} onShowAll={showAll} />
           ))}
-          {games.length > 0 && (
-            <section>
-              <h2 className="mb-3 font-display text-[15px] font-bold tracking-tight">{t.library.allGames}</h2>
-              <Grid tiles={games} focusKey="LIBRARY_ALL" onPick={pick} />
-            </section>
-          )}
+          {allGames && <Row collection={allGames} index={ordered.length + 1} onPick={pick} onShowAll={showAll} />}
           {games.length === 0 && ordered.length === 0 && (
             <div className="py-24 text-center text-sm text-ink-3">{t.home.loadingLibrary}</div>
           )}
@@ -120,16 +169,25 @@ function Row({
   collection,
   index,
   onPick,
+  onShowAll,
+  accent,
 }: {
   collection: Collection
   index: number
   onPick: (t: GameTile) => void
+  onShowAll: (c: Collection) => void
+  // The account's own shelf. Marked so it reads as "yours" rather than as one more
+  // catalogue row it happens to sit above.
+  accent?: boolean
 }): JSX.Element {
   const { focusKey, props } = useFocus({
     focusKey: `ROW_${collection.id}`,
     trackChildren: true,
     saveLastFocusedChild: true,
   })
+
+  // Worth offering only when the row is hiding some of the shelf behind it.
+  const more = collection.total > collection.tiles.length
 
   return (
     <FocusContext.Provider value={focusKey}>
@@ -138,12 +196,21 @@ function Row({
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: Math.min(index, 4) * 0.06, ease: [0.16, 1, 0.3, 1] }}
+        className={accent ? 'rounded-2xl bg-gradient-to-b from-xbox/[0.08] to-transparent p-4 -mx-4' : undefined}
       >
-        <div className="mb-3">
-          <h2 className="font-display text-[15px] font-bold tracking-tight">{collection.title}</h2>
-          {collection.description && (
-            <p className="mt-0.5 text-[12px] text-ink-3">{collection.description}</p>
+        <div className="mb-3 flex items-center gap-2">
+          {accent && (
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" className="text-xbox-lift" aria-hidden="true">
+              <path d="M2 4.5h12M2 8h12M2 11.5h7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+            </svg>
           )}
+          <div className="min-w-0">
+            <h2 className="font-display text-[15px] font-bold tracking-tight">{collection.title}</h2>
+            {collection.description && (
+              <p className="mt-0.5 text-[12px] text-ink-3">{collection.description}</p>
+            )}
+          </div>
+          {more && <ShowAll onPress={() => onShowAll(collection)} />}
         </div>
         <div className="-mx-2 -my-3 flex gap-3.5 overflow-x-auto px-2 py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {collection.tiles.map((t) => (
@@ -154,6 +221,40 @@ function Row({
         </div>
       </motion.section>
     </FocusContext.Provider>
+  )
+}
+
+function ShowAll({ onPress }: { onPress: () => void }): JSX.Element {
+  const { props, focused } = useFocus({ onEnterPress: onPress })
+  return (
+    <button
+      {...props}
+      onClick={onPress}
+      className={`focusable ml-auto shrink-0 rounded-full border px-3 py-1 text-[11.5px] font-semibold transition ${
+        focused ? 'border-velocity bg-xbox/20 text-white' : 'border-white/12 text-ink-2 hover:text-white'
+      }`}
+    >
+      {t.library.showAll} →
+    </button>
+  )
+}
+
+function BackButton({ onPress }: { onPress: () => void }): JSX.Element {
+  const { props, focused } = useFocus({ focusKey: 'LIBRARY_DETAIL_BACK', onEnterPress: onPress })
+  useEffect(() => {
+    setFocus('LIBRARY_DETAIL_BACK')
+  }, [])
+  return (
+    <button
+      {...props}
+      onClick={onPress}
+      className={`focusable flex w-fit items-center gap-2 rounded-full border px-4 py-2 text-[12px] font-semibold transition ${
+        focused ? 'border-velocity bg-xbox/[0.13] text-white' : 'border-white/10 bg-white/[0.05] text-ink-2 hover:text-white'
+      }`}
+    >
+      <span className="grid h-[15px] w-[15px] place-items-center rounded bg-black/45 font-mono text-[9px]">B</span>
+      {t.nav.back}
+    </button>
   )
 }
 

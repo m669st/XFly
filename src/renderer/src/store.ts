@@ -52,6 +52,12 @@ interface AppState {
   /** The in-game menu. Opened from the pad, so it cannot live inside the component. */
   hudOpen: boolean
 
+  /** A transient message — e.g. a game the account cannot play. Null when nothing to say. */
+  toast: string | null
+
+  /** Product ids that take a keyboard and mouse natively, for the card badge. */
+  mkbIds: Set<string>
+
   /** Queue estimate for this launch, seconds. Null until the region answers. */
   waitSeconds: number | null
 
@@ -78,6 +84,8 @@ interface AppState {
   setStreamState: (s: AppState['streamState']) => void
   setHudOpen: (v: boolean) => void
   toggleHud: () => void
+  setToast: (v: string | null) => void
+  setMkbIds: (v: Set<string>) => void
   setWaitSeconds: (v: number | null) => void
   setSessionState: (s: string | null) => void
   setRegions: (r: AppState['regions']) => void
@@ -96,6 +104,8 @@ export const useStore = create<AppState>((set) => ({
   settings: {},
   streamState: 'idle',
   hudOpen: false,
+  toast: null,
+  mkbIds: new Set(),
   waitSeconds: null,
   sessionState: null,
   regions: [],
@@ -145,6 +155,8 @@ export const useStore = create<AppState>((set) => ({
       ...(streamState === 'playing' || streamState === 'idle' || streamState === 'ended' ? { waitSeconds: null } : {}),
     }),
   setHudOpen: (hudOpen) => set({ hudOpen }),
+  setToast: (toast) => set({ toast }),
+  setMkbIds: (mkbIds) => set({ mkbIds }),
   setWaitSeconds: (waitSeconds) => set({ waitSeconds }),
   toggleHud: () => set((s) => ({ hudOpen: !s.hudOpen })),
   setSessionState: (sessionState) => set({ sessionState }),

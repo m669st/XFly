@@ -44,6 +44,11 @@ export function patchFetch(): void {
     if (/\/sessions\/cloud\/play$/.test(url) && method === 'POST') {
       try {
         const req = input instanceof Request ? input : new Request(input, init)
+        // A request body can only be read once. The no-spoof retry below needs its own
+        // untouched copy — reusing `req` (or `input`) after it has been sent throws
+        // "Request object that has already been used", which is what was swallowing the
+        // real error and leaving the launch spinning.
+        const retryReq = req.clone()
         const body = await req.clone().json()
         {
           const osName = OS_NAME
@@ -92,8 +97,25 @@ export function patchFetch(): void {
             return spoofed
           }
           const why = await spoofed.clone().text().catch(() => '')
+          let code = ''
+          try {
+            code = JSON.parse(why)?.code || ''
+          } catch {
+            /* body was not json */
+          }
+
+          // The account does not own this game. No amount of retrying changes that —
+          // the device spoof was never the problem. Tell our launcher so it can turn
+          // the user around at the loading screen instead of letting xCloud grind
+          // through its own retries into an error page.
+          if (code === 'NoEntitlement') {
+            diag('session', `play denied: not entitled to ${body.titleId || 'title'}`)
+            emit({ type: 'play.denied', reason: 'notEntitled' })
+            return spoofed
+          }
+
           diag('session', `play rejected (${spoofed.status}) ${why.slice(0, 300)} — retrying WITHOUT device spoof`)
-          const plain = await native(new Request(input as any, init))
+          const plain = await native(retryReq)
           diag('session', `POST /sessions/cloud/play (no spoof) -> ${plain.status}`)
           return plain
         }

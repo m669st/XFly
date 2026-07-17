@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import { init } from '@noriginmedia/norigin-spatial-navigation'
 import App from './App'
 import { useStore } from './store'
+import { t, fmt } from './lib/i18n'
 import { productsToTiles } from './lib/xbox'
 import { startGamepadNavigation } from './lib/gamepad'
 import './styles.css'
@@ -32,6 +33,17 @@ function connect(): void {
     if (!ev) return
     if (ev.type === 'stream.state') useStore.getState().setStreamState(ev.state)
     else if (ev.type === 'menu.toggle') useStore.getState().toggleHud()
+    else if (ev.type === 'play.denied') {
+      // The account cannot play this one. Turn around at the loading screen rather
+      // than letting it sit there — the title we were launching is the name to show.
+      const st = useStore.getState()
+      const name = st.launching?.title
+      st.setStreamState('idle')
+      st.setLaunching(null)
+      st.setView('home')
+      window.xfly.showLauncher()
+      st.setToast(name ? fmt(t.library.notOwned, { game: name }) : t.library.notOwnedGeneric)
+    }
     else if (ev.type === 'waittime') useStore.getState().setWaitSeconds(ev.seconds)
     else if (ev.type === 'session.state') useStore.getState().setSessionState(ev.state)
     else if (ev.type === 'regions' && Array.isArray(ev.regions)) useStore.getState().setRegions(ev.regions)

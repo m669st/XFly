@@ -84,28 +84,71 @@ export const STORE_COLLECTIONS = [
   '3aa7a358-f15b-476b-af7e-134a250c08a0',
 ]
 
+/**
+ * Stream your own games — the titles the account actually owns and can stream,
+ * as opposed to the hundreds in the Game Pass catalogue. Empty for an account
+ * that has never bought a cloud-enabled game, and loadCollection returns null in
+ * that case, so it simply does not appear rather than showing an empty shelf.
+ */
+export const SYOG_COLLECTION = 'e4c1d680-2c70-45e4-a38d-8a292c68c700'
+
+/**
+ * The games xCloud lists as playing natively with a keyboard and mouse. Most cloud
+ * titles expect a pad and only fake keyboard support; this is the shortlist that
+ * genuinely takes one, so the card can say so.
+ */
+const NATIVE_MKB_COLLECTION = '8fa264dd-124f-4af3-97e8-596fcdf4b486'
+
+export async function loadMkbIds(): Promise<Set<string>> {
+  const res = await call({ kind: 'collection', id: NATIVE_MKB_COLLECTION }).catch(() => null)
+  if (!res?.ok) return new Set()
+  return new Set(siglProductIds(res.data))
+}
+
 export interface Collection {
   id: string
   title: string
   description?: string
   tiles: GameTile[]
+  /** How many the collection holds in total, so a row knows whether "Show all" is worth offering. */
+  total: number
 }
 
-export async function loadCollection(id: string, limit = 24): Promise<Collection | null> {
+export async function loadCollection(
+  id: string,
+  limit = 24,
+  titleOverride?: string,
+): Promise<Collection | null> {
   const res = await call({ kind: 'collection', id }).catch(() => null)
   if (!res?.ok) return null
   const arr: any[] = Array.isArray(res.data) ? res.data : res.data?.items || []
   const meta = arr[0] && !arr[0].id ? arr[0] : null
-  const ids = siglProductIds(arr).slice(0, limit)
+  const allIds = siglProductIds(arr)
+  const ids = allIds.slice(0, limit)
   if (!ids.length) return null
 
-  const products = await call({ kind: 'products', productIds: ids }).catch(() => null)
-  if (!products?.data?.Products) return null
-  const byId = new Map(productsToTiles(products.data.Products).map((t) => [t.productId, t]))
+  // The catalogue endpoint takes a bounded batch, so a full shelf is fetched in
+  // chunks and stitched back into the collection's own order.
+  const byId = new Map<string, GameTile>()
+  for (let i = 0; i < ids.length; i += 150) {
+    const chunk = ids.slice(i, i + 150)
+    const products = await call({ kind: 'products', productIds: chunk }).catch(() => null)
+    if (products?.data?.Products) {
+      for (const t of productsToTiles(products.data.Products)) byId.set(t.productId, t)
+    }
+  }
   const tiles = groupEditions(ids.map((pid) => byId.get(pid)).filter((t): t is GameTile => !!t))
   if (!tiles.length) return null
 
-  return { id, title: meta?.title || 'Oyunlar', description: meta?.description, tiles }
+  // The override wins because our own label is translated; the API's meta.title comes
+  // back in the account's market language, which is not always the app's.
+  return {
+    id,
+    title: titleOverride || meta?.title || 'Oyunlar',
+    description: meta?.description,
+    tiles,
+    total: allIds.length,
+  }
 }
 
 export async function loadLibrary(onBatch?: (tiles: GameTile[]) => void): Promise<GameTile[]> {

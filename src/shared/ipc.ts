@@ -65,6 +65,8 @@ export type EngineEvent =
   | { type: 'menu.toggle' }
   /** Queue estimate for the region we are launching on, in seconds. */
   | { type: 'waittime'; seconds: number }
+  /** The account cannot play the title it just asked for — no entitlement. */
+  | { type: 'play.denied'; reason: 'notEntitled' }
 
 export interface StreamStats {
   t: number
