@@ -1,0 +1,6 @@
+# Puts a "Sponsor this project" button at the top of the repo.
+#
+# `custom` rather than one of the named providers: GitHub knows about Patreon,
+# Ko-fi and the rest, and Instagram is not one of them — a custom link is the
+# supported way to point anywhere else.
+custom: ['https://www.instagram.com/mxhmetpyrz']

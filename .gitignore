@@ -1,0 +1,32 @@
+node_modules/
+out/
+dist/
+
+build/icon-preview.png
+release/
+*.log
+
+# research artifacts (large captures + a throwaway browser profile)
+research/out/
+research/opera-profile/
+
+# The uncensored screenshots. `home.png` is the one the README uses; these are the
+# sources it was made from and they have somebody's gamertag and profile picture
+# in the corner. A screenshot committed once is committed forever — replacing the
+# file later does not take it out of the history.
+screenshots/Untitled*.png
+
+# incremental typecheck state, not source
+*.tsbuildinfo
+
+# local notes, tooling and editor state: on disk, not part of the project
+scripts/
+XFly-Exe.bat
+research/
+.claude/
+.vscode/
+.idea/
+PLAN.md
+BUILD_LOG.md
+DECISIONS.md
+COMMENTS-ARCHIVE.txt

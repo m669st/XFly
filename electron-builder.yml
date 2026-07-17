@@ -1,0 +1,62 @@
+appId: com.xfly.app
+productName: XFly
+copyright: XFly
+
+directories:
+  output: dist
+  buildResources: build
+
+# electron-vite emits everything runnable into out/. package.json is needed for
+# the "main" entry; nothing else in the repo belongs inside the app.
+files:
+  - out/**/*
+  - package.json
+
+# The launcher is one process and some JS — asar keeps it a single file rather
+# than thousands, which is faster to load and much faster to install.
+asar: true
+
+win:
+  icon: build/icon.ico
+  # Both, deliberately. The installer is what most people want; the portable exe
+  # is a single file that runs from anywhere, which is what a "just give me the
+  # exe" build means.
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+
+nsis:
+  # A per-user install needs no admin prompt, and this app has no business
+  # asking for one — it writes to its own userData and nowhere else.
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: XFly
+  artifactName: XFly-Setup-${version}.exe
+
+portable:
+  artifactName: XFly-${version}-portable.exe
+
+# Nothing is signed: there is no certificate, and an unsigned build that says so
+# is better than a build that fails at the last step of a long package run.
+# SmartScreen will warn on first run — that is what unsigned means, not a fault.
+forceCodeSigning: false
+
+# Where releases go, and where the updater looks. One and the same, deliberately:
+# electron-builder uploads the installer and a `latest.yml` describing it, and
+# every copy already installed reads that same `latest.yml` to work out whether
+# it is behind. A second source of truth here would mean an app that updates
+# itself to something nobody published.
+#
+# The owner/repo are NOT repeated here — they come from package.json's
+# `repository` field. A slug written in two places is a slug that will disagree
+# once.
+publish:
+  provider: github
+  # Prereleases are for testers, who opt in by downloading them. One must never
+  # be handed to everybody by the updater.
+  releaseType: release
