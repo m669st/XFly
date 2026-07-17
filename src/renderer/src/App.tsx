@@ -9,7 +9,7 @@ import { Splash } from './components/Splash'
 import { Mark } from './components/Mark'
 import { useFocus, setFocus } from './lib/focus'
 import { t } from './lib/i18n'
-import { loadLibrary, loadRecent, loadProfile, loadMkbIds } from './lib/xbox'
+import { loadLibrary, loadRecent, loadProfile, loadMkbIds, loadEntitledIds } from './lib/xbox'
 
 const BOOT_MAX_MS = 8_000
 
@@ -35,6 +35,7 @@ export default function App(): JSX.Element {
 
     loadLibrary((batch) => useStore.getState().mergeLibrary(batch)).catch(() => {})
     loadMkbIds().then((ids) => ids.size && useStore.getState().setMkbIds(ids)).catch(() => {})
+    loadEntitledIds().then((ids) => ids.size && useStore.getState().setEntitledIds(ids)).catch(() => {})
   }, [signedIn])
 
   const inGame = streamState === 'playing' || streamState === 'starting' || streamState === 'loading'

@@ -348,7 +348,18 @@ function Search({
   onOpen: () => void
 }): JSX.Element {
   const input = useRef<HTMLInputElement>(null)
-  const { props, focused } = useFocus({ focusKey: 'LIBRARY_SEARCH_BOX', onEnterPress: onOpen })
+
+  // A pad opens the on-screen keyboard because it has no keys. A real keyboard does
+  // not — opening the OSC over it is what made backspace and enter misbehave, since
+  // those went to the OSC instead of the field. So: pad present → OSC; otherwise just
+  // focus the field and let the keyboard type into it.
+  const activate = (): void => {
+    const hasPad = Array.from(navigator.getGamepads?.() ?? []).some((p) => p && p.connected)
+    if (hasPad) onOpen()
+    else input.current?.focus()
+  }
+
+  const { props, focused } = useFocus({ focusKey: 'LIBRARY_SEARCH_BOX', onEnterPress: activate })
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
@@ -363,7 +374,7 @@ function Search({
   return (
     <div
       {...props}
-      onClick={onOpen}
+      onClick={activate}
       className={`focusable flex items-center gap-2 rounded-full border px-4 py-2 transition ${
         focused ? 'border-velocity bg-xbox/[0.13]' : 'border-white/10 bg-white/[0.05]'
       }`}

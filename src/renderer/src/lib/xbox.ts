@@ -1,4 +1,5 @@
 import { useStore, type GameTile, type Profile } from '../store'
+import { t, fmt } from './i18n'
 
 type ApiResult = { ok: boolean; status: number; data: any }
 
@@ -85,12 +86,27 @@ export const STORE_COLLECTIONS = [
 ]
 
 /**
- * Stream your own games — the titles the account actually owns and can stream,
- * as opposed to the hundreds in the Game Pass catalogue. Empty for an account
- * that has never bought a cloud-enabled game, and loadCollection returns null in
- * that case, so it simply does not appear rather than showing an empty shelf.
+ * Stream your own game — the buy-and-stream catalogue, the same shelf xbox.com's
+ * own "Stream your own game" page loads. Verified live: this is the id that page
+ * requests (~3,300 titles), not e4c1d680, which is a 38-title "limited time" subset
+ * that the page no longer uses.
  */
-export const SYOG_COLLECTION = 'e4c1d680-2c70-45e4-a38d-8a292c68c700'
+export const SYOG_COLLECTION = 'e78d9a61-5ef4-43af-b400-edba1250b18e'
+
+/**
+ * The product ids streamable on a subscription in this market — the union across
+ * every tier. A game absent from this is one no subscription covers, so launching it
+ * would be denied; the launcher checks against this before it ever calls play.
+ */
+export async function loadEntitledIds(): Promise<Set<string>> {
+  const res = await call({ kind: 'subscriptions' }).catch(() => null)
+  if (!res?.ok || !res.data || typeof res.data !== 'object') return new Set()
+  const ids = new Set<string>()
+  for (const tier of Object.values(res.data as Record<string, unknown>)) {
+    if (Array.isArray(tier)) for (const id of tier) if (typeof id === 'string') ids.add(id)
+  }
+  return ids
+}
 
 /** Games about to leave Game Pass — worth surfacing so they are not missed. */
 export const LEAVING_SOON_COLLECTION = '393f05bf-e596-4ef6-9487-6d4fa0eab987'
@@ -231,6 +247,19 @@ export async function loadProfile(known?: Profile): Promise<Profile> {
 }
 
 export function launch(tile: GameTile): void {
-  useStore.getState().setLaunching(tile)
+  const st = useStore.getState()
+
+  // Turn the user around before the console is ever asked for. A game no subscription
+  // covers would come back 400 NoEntitlement and hang the loading screen; checking the
+  // entitlement list here means it never gets that far. Only gate when the list
+  // actually loaded — an empty set means the check is unavailable, not that nothing
+  // is owned — and pass any edition, since owning one is enough.
+  const ids = tile.editions?.length ? tile.editions.map((e) => e.productId) : [tile.productId]
+  if (st.entitledIds.size > 0 && !ids.some((id) => st.entitledIds.has(id))) {
+    st.setToast(fmt(t.library.notOwned, { game: tile.title }))
+    return
+  }
+
+  st.setLaunching(tile)
   window.xfly.engineCommand({ type: 'launch', productId: tile.productId, title: tile.title })
 }

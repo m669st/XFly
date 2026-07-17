@@ -7,6 +7,14 @@ export type ApiSpec =
   | { kind: 'recentlyPlayed' }
   | { kind: 'products'; productIds: string[] }
   | { kind: 'collection'; id: string }
+  /**
+   * Which product ids can be streamed on a subscription in this market, grouped by
+   * tier (pc, console, ultimate, eaaccess, …). Verified against a live account: a
+   * game the account was denied at play time is absent here, a game it could play is
+   * present. So it is the entitlement check the launcher never had — read once, not
+   * per launch.
+   */
+  | { kind: 'subscriptions' }
   | { kind: 'profile' }
   /**
    * The account photo, without an account.
@@ -64,6 +72,10 @@ export async function apiRequest(spec: ApiSpec): Promise<unknown> {
       url =
         `https://catalog.gamepass.com/sigls/v3?id=${spec.id}&market=${market}&language=${language}` +
         `&subscriptionContext=none&platformContext=${encodeURIComponent('Cloud:XGPUWEB')}`
+      auth = 'none'
+      break
+    case 'subscriptions':
+      url = `https://catalog.gamepass.com/subscriptions?subscription=all&market=${market}`
       auth = 'none'
       break
     case 'profile':

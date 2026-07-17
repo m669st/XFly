@@ -39,14 +39,25 @@ export function Osc({
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
-      if (e.key !== 'Escape') return
-      // B arrives here as Escape, and the library behind us listens for it too —
-      // one press was closing this keyboard and then throwing the user out to the
-      // home screen. Caught on the way down and stopped: B closes the keyboard and
-      // nothing else.
-      e.stopPropagation()
-      e.preventDefault()
-      onClose()
+      // The OSC is for the pad, but if a real keyboard is also plugged in its keys
+      // must do the obvious thing here rather than fall through to the library
+      // behind — which was turning Backspace into "go home" and leaving Enter dead.
+      if (e.key === 'Escape') {
+        e.stopPropagation()
+        e.preventDefault()
+        onClose()
+      } else if (e.key === 'Enter') {
+        e.stopPropagation()
+        e.preventDefault()
+        latest.current.onClose()
+      } else if (e.key === 'Backspace') {
+        e.stopPropagation()
+        e.preventDefault()
+        latest.current.onChange(latest.current.value.slice(0, -1))
+      } else if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        e.stopPropagation()
+        latest.current.onChange(latest.current.value + e.key)
+      }
     }
     window.addEventListener('keydown', onKey, true)
     return () => window.removeEventListener('keydown', onKey, true)
