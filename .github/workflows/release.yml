@@ -1,0 +1,69 @@
+# Cut a release by pushing a tag:
+#
+#   npm version patch      # bumps package.json and makes the v-tag
+#   git push --follow-tags
+#
+# ...and that is the whole ritual. This builds on a clean machine, uploads the
+# installer, the portable exe and the `latest.yml` that goes with them, and the
+# updater in every copy already out there reads that same `latest.yml`. Nothing
+# is uploaded by hand, so nothing can be uploaded half-done or built from a tree
+# with uncommitted changes in it.
+name: release
+
+on:
+  push:
+    tags: ['v*']
+  # ...and by hand, for a dry run that publishes nothing.
+  workflow_dispatch:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    permissions:
+      # electron-builder creates the GitHub Release and uploads to it, which is a
+      # write. It needs nothing else.
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      # Typecheck before packaging, not after: a build that compiles is not the
+      # same as a build that is correct, and finding out after a ten-minute
+      # package run is finding out too late.
+      - run: npm run typecheck
+
+      # This is what makes out/ exist, and leaving it out is what broke the first
+      # release:
+      #
+      #   Application entry file "out\main\index.js" in the
+      #   "…\dist\win-unpacked\resources\app.asar" does not exist.
+      #
+      # electron-builder packages a directory. It does not build one.
+      - run: npm run build
+
+      - name: Package and publish
+        # `--publish always` on a tag, and never otherwise: a manual run is for
+        # proving the build still works, not for putting something on the
+        # releases page by accident.
+        run: npx electron-builder --win --config electron-builder.yml --publish ${{ startsWith(github.ref, 'refs/tags/v') && 'always' || 'never' }}
+        env:
+          # Provided by Actions. No secret to configure and nothing to rotate:
+          # this token exists only for this run and expires with it.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # So a manual run still hands you something to test.
+      - uses: actions/upload-artifact@v4
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        with:
+          name: XFly-windows
+          path: |
+            dist/*.exe
+            dist/latest.yml
+          if-no-files-found: error

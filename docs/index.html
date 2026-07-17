@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>XFly — Xbox Cloud Gaming client for Windows, with RTX VSR upscaling</title>
+
+<meta name="description" content="XFly is a free, open-source Windows client for Xbox Cloud Gaming (xCloud). It has built-in RTX Video Super Resolution support, so your NVIDIA or AMD card upscales the 1440p stream to 4K. Controller-first launcher, no browser, no configuration.">
+<link rel="canonical" href="https://m669st.github.io/XFly/">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="XFly — Xbox Cloud Gaming, as a console">
+<meta property="og:description" content="A free Windows client for xCloud with built-in RTX VSR upscaling. 1440p in, 4K out, on your own GPU.">
+<meta property="og:url" content="https://m669st.github.io/XFly/">
+<meta property="og:image" content="https://raw.githubusercontent.com/m669st/XFly/main/screenshots/home.png">
+<meta name="twitter:card" content="summary_large_image">
+
+<!--
+  Structured data, because a page that says what it is in a machine-readable way is
+  a page a crawler does not have to guess at. Nothing here claims anything the app
+  does not do: it is the same facts as the README, in the shape schema.org expects.
+-->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "XFly",
+  "applicationCategory": "GameApplication",
+  "operatingSystem": "Windows 10, Windows 11",
+  "description": "A native Windows client for Xbox Cloud Gaming (xCloud) with built-in RTX Video Super Resolution support. Upscales the 1440p cloud stream to your screen's resolution using your own GPU. Controller-first launcher, local co-op, ten languages, automatic updates.",
+  "url": "https://m669st.github.io/XFly/",
+  "downloadUrl": "https://github.com/m669st/XFly/releases/latest",
+  "license": "https://opensource.org/licenses/MIT",
+  "isAccessibleForFree": true,
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+}
+</script>
+
+<style>
+  :root {
+    --bg: #0b0d0b; --panel: #121512; --line: #23282350; --ink: #f2f5f2;
+    --dim: #98a098; --green: #107C10; --lift: #3FB950;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.65 -apple-system, "Segoe UI", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--lift); }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+  header { text-align: center; padding: 72px 0 56px; }
+  h1 { font-size: clamp(48px, 9vw, 84px); margin: 0; letter-spacing: -.04em; font-weight: 800; }
+  h1 span { color: var(--lift); }
+  .tag { font-size: clamp(17px, 2.4vw, 22px); color: var(--dim); margin: 14px 0 0; }
+  .lede { max-width: 620px; margin: 22px auto 0; color: var(--dim); }
+  .cta { display: inline-flex; gap: 10px; align-items: center; margin-top: 32px;
+    background: var(--green); color: #fff; text-decoration: none; font-weight: 700;
+    padding: 15px 34px; border-radius: 999px; }
+  .cta:hover { filter: brightness(1.15); }
+  .sub { display: block; margin-top: 12px; color: var(--dim); font-size: 13.5px; }
+  h2 { font-size: 30px; letter-spacing: -.02em; margin: 0 0 8px; }
+  section { padding: 56px 0; border-top: 1px solid var(--line); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 26px; margin-top: 30px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 22px; }
+  .card h3 { margin: 12px 0 6px; font-size: 16.5px; }
+  .card p { margin: 0; color: var(--dim); font-size: 14.5px; }
+  figure { margin: 26px 0 0; }
+  img.shot { width: 100%; border-radius: 12px; border: 1px solid var(--line); display: block; }
+  figcaption { color: var(--dim); font-size: 13.5px; margin-top: 10px; text-align: center; }
+  table { width: 100%; border-collapse: collapse; margin-top: 24px; font-size: 14.5px; }
+  th, td { text-align: left; padding: 11px 12px; border-bottom: 1px solid var(--line); }
+  th { color: var(--dim); font-weight: 600; }
+  .note { background: var(--panel); border: 1px solid var(--line); border-left: 3px solid #e8a33d;
+    border-radius: 10px; padding: 16px 18px; margin-top: 26px; color: var(--dim); font-size: 14.5px; }
+  footer { padding: 44px 0 64px; color: var(--dim); font-size: 13.5px; text-align: center;
+    border-top: 1px solid var(--line); }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>X<span>Fly</span></h1>
+    <p class="tag">Xbox Cloud Gaming, as a console — not a browser tab.</p>
+    <p class="lede">
+      A free, open-source Windows client for xCloud. It plays your Game Pass library on your own
+      screen with your own controller, and gets out of the way.
+    </p>
+    <a class="cta" href="https://github.com/m669st/XFly/releases/latest">Download for Windows</a>
+    <span class="sub">Free and open source. Requires Xbox Game Pass Ultimate.</span>
+  </header>
+
+  <section>
+    <h2>1440p in. 4K out.</h2>
+    <p style="color:var(--dim);max-width:680px">
+      Xbox Cloud Gaming streams at up to 1440p, and on a 4K screen that normally means a 1440p picture
+      stretched to fit. Every NVIDIA RTX card since the 20 series has Video Super Resolution on it, and
+      AMD ships Video Upscale in Adrenalin. XFly has full built-in support for both: your card rebuilds
+      each frame up to your screen's real resolution, on hardware that is idle anyway, so it costs no
+      frames.
+    </p>
+
+    <table>
+      <tr><th></th><th>Without</th><th>With XFly</th></tr>
+      <tr><td>What arrives</td><td>up to 1440p</td><td>up to 1440p</td></tr>
+      <tr><td>What a 4K screen shows</td><td>1440p, stretched</td><td>rebuilt to 4K, by your GPU</td></tr>
+      <tr><td>Frame rate</td><td>60fps</td><td>60fps — the upscale is free</td></tr>
+      <tr><td>On a bad night</td><td>blocking, smearing</td><td>cleaned before it is scaled</td></tr>
+    </table>
+
+    <div class="note">
+      <strong>AMD is supported and untested.</strong> It is wired up the same way as NVIDIA and should
+      behave the same, but there is no Radeon here to try it on. AMD documents Video Upscale for the RX
+      7000 series; RX 9000 is included because it is newer silicon, which is a reasonable guess and not
+      a tested fact. If you have either,
+      <a href="https://github.com/m669st/XFly/issues">tell us what happens</a>.
+    </div>
+  </section>
+
+  <section>
+    <h2>What you get</h2>
+    <div class="grid">
+      <div class="card">
+        <img src="icons/sharp.svg" width="24" height="24" alt="">
+        <h3>A sharper picture</h3>
+        <p>Your RTX or Radeon does the work. 1440p that actually looks like 1440p — or 4K, if that is your screen.</p>
+      </div>
+      <div class="card">
+        <img src="icons/clean.svg" width="24" height="24" alt="">
+        <h3>Clean on a bad night</h3>
+        <p>No blocking, no smearing around the edges — with or without a fancy card.</p>
+      </div>
+      <div class="card">
+        <img src="icons/resolution.svg" width="24" height="24" alt="">
+        <h3>The resolution you chose</h3>
+        <p>And it stays there. No quiet slide down to 720p halfway through. Nothing to configure.</p>
+      </div>
+      <div class="card">
+        <img src="icons/region.svg" width="24" height="24" alt="">
+        <h3>Works in your country</h3>
+        <p>Not on Microsoft's list? It still works.</p>
+      </div>
+      <div class="card">
+        <img src="icons/controller.svg" width="24" height="24" alt="">
+        <h3>Controller only</h3>
+        <p>Every screen, every menu. You will never reach for the mouse.</p>
+      </div>
+      <div class="card">
+        <img src="icons/coop.svg" width="24" height="24" alt="">
+        <h3>Two pads, two players</h3>
+        <p>Local co-op, the way it is supposed to be.</p>
+      </div>
+      <div class="card">
+        <img src="icons/language.svg" width="24" height="24" alt="">
+        <h3>Your language, already set</h3>
+        <p>Ten of them, picked up from your machine. Nothing to configure.</p>
+      </div>
+      <div class="card">
+        <img src="icons/noweb.svg" width="24" height="24" alt="">
+        <h3>No website</h3>
+        <p>Your game fills the screen. That is the whole thing.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Screenshots</h2>
+    <figure>
+      <img class="shot" src="https://raw.githubusercontent.com/m669st/XFly/main/screenshots/home.png" alt="XFly home screen showing the last played game full-bleed with a Play button">
+      <figcaption>Home — the game you were last playing, and one button.</figcaption>
+    </figure>
+    <figure>
+      <img class="shot" src="https://raw.githubusercontent.com/m669st/XFly/main/screenshots/library.png" alt="XFly library screen showing rows of Xbox Game Pass cloud games">
+      <figcaption>Library — everything you can play, one keystroke away.</figcaption>
+    </figure>
+    <figure>
+      <img class="shot" src="https://raw.githubusercontent.com/m669st/XFly/main/screenshots/settings.png" alt="XFly settings screen showing resolution, bitrate and video enhancer options">
+      <figcaption>Settings — short, and every line of it does something.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <h2>Getting it</h2>
+    <p style="color:var(--dim)">
+      Download the installer or the portable exe from
+      <a href="https://github.com/m669st/XFly/releases/latest">the latest release</a>, run it, and sign
+      in with your Microsoft account. Both keep themselves up to date.
+    </p>
+    <div class="note">
+      <strong>Windows will warn you on first run.</strong> XFly is not code-signed — a certificate costs
+      money this project does not have — so SmartScreen shows "Windows protected your PC". Click
+      <em>More info</em>, then <em>Run anyway</em>. The whole source is
+      <a href="https://github.com/m669st/XFly">on GitHub</a>, and every release is built in the open by
+      GitHub from that exact code.
+    </div>
+  </section>
+
+  <footer>
+    <p>
+      <a href="https://github.com/m669st/XFly">GitHub</a> &middot;
+      <a href="https://github.com/m669st/XFly/releases">Releases</a> &middot;
+      <a href="https://github.com/m669st/XFly/issues">Issues</a>
+    </p>
+    <p>
+      XFly is an unofficial community project. It is not made by, endorsed by, or connected to
+      Microsoft or Xbox, and it gives you nothing your subscription does not already include.<br>
+      Xbox, Xbox Game Pass and Xbox Cloud Gaming are trademarks of Microsoft.
+    </p>
+    <p>Licensed under the MIT License.</p>
+  </footer>
+</div>
+
+</body>
+</html>

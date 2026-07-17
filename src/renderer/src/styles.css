@@ -1,0 +1,197 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+* {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  background: transparent;
+  color: #ffffff;
+  font-family: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+  overflow: hidden;
+}
+
+/* The launcher ground: black, with the brand green as the only light in it. */
+.xfly-bg {
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(1200px 620px at 12% -12%, rgba(16, 124, 16, 0.20), transparent 62%),
+    radial-gradient(900px 640px at 108% 24%, rgba(22, 161, 22, 0.13), transparent 58%),
+    linear-gradient(160deg, #000000 0%, #070907 58%, #000000 100%);
+  z-index: 0;
+}
+.xfly-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 3px 3px;
+  opacity: 0.4;
+}
+
+/* indeterminate progress bar (slides across, never "fills and empties") */
+@keyframes xflySlide {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(300%);
+  }
+}
+.xfly-progress {
+  animation: xflySlide 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+/* the boot mark: alive, not animated at you */
+@keyframes xflyBreathe {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 22px rgba(16, 124, 16, 0.5));
+  }
+  50% {
+    transform: scale(1.045);
+    filter: drop-shadow(0 0 40px rgba(22, 161, 22, 0.75));
+  }
+}
+.xfly-breathe {
+  animation: xflyBreathe 2.6s ease-in-out infinite;
+}
+
+/**
+ * The screen breathing, very slowly.
+ *
+ * Measured before this existed: with nothing being touched, the number of
+ * elements moving on the home screen was one — the focused card. Everything
+ * else, including a full-bleed piece of key art, was frozen. That is the
+ * quietest reason a screen reads as cheap: it is a screenshot, not a place.
+ *
+ * 40 seconds for a 6% drift is deliberately below the threshold of noticing.
+ * You should never catch it moving; you should only notice that it was alive
+ * when it stops. transform only, so it is a compositor job and costs the GPU
+ * almost nothing while a game is not running.
+ */
+@keyframes xflyDrift {
+  0% {
+    transform: scale(1.06) translate3d(0, 0, 0);
+  }
+  50% {
+    transform: scale(1.09) translate3d(-1.1%, -0.7%, 0);
+  }
+  100% {
+    transform: scale(1.06) translate3d(0, 0, 0);
+  }
+}
+.xfly-drift {
+  animation: xflyDrift 40s ease-in-out infinite;
+  will-change: transform;
+}
+
+/**
+ * Grain and a vignette, over the art.
+ *
+ * Flat digital gradients band — you can see the steps in any dark wash on an
+ * 8-bit panel, and banding is the thing that reads as "cheap render" more than
+ * any other. A very faint grain breaks the step boundaries into noise the eye
+ * integrates away, and every film, game and console UI that looks expensive is
+ * doing some version of it.
+ *
+ * The noise is an inline SVG turbulence: no asset, no request, and it tiles
+ * itself. Kept under 4% or it stops being a surface and becomes an effect.
+ */
+.xfly-grain::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.xfly-vignette::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background: radial-gradient(120% 95% at 50% 45%, transparent 55%, rgba(0, 0, 0, 0.45) 100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .xfly-breathe,
+  .xfly-progress,
+  .xfly-drift {
+    animation: none;
+  }
+}
+
+.glass {
+  background: rgba(20, 20, 32, 0.55);
+  backdrop-filter: blur(18px) saturate(1.3);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/**
+ * The cursor, and why it now has weight.
+ *
+ * This is the most-felt thing in the app — it fires on every move, hundreds of
+ * times a session — and it was `transition: transform 0.15s ease`. `ease` is
+ * CSS's default curve: the most generic motion a browser can produce, decaying
+ * politely into place. Nothing in it says an object arrived.
+ *
+ * The curve below overshoots and settles. That is the whole difference between
+ * a menu that feels like a web page and one that feels like a console: a
+ * console's cursor has mass, so it lands slightly past and comes back. It is a
+ * spring written as a bezier — cheap, GPU-composited, and no library.
+ *
+ * The lift is bigger and the glow softer than before, because with real motion
+ * the movement carries the emphasis and the ring no longer has to shout.
+ */
+.focusable {
+  outline: none;
+  transition:
+    transform 0.34s cubic-bezier(0.2, 1.5, 0.4, 1),
+    box-shadow 0.22s ease-out,
+    background 0.22s ease-out;
+}
+.focusable[data-focused='true'] {
+  transform: translateY(-5px) scale(1.045);
+  box-shadow: 0 0 0 2.5px #9bf00b, 0 14px 34px rgba(0, 0, 0, 0.55), 0 0 42px rgba(16, 124, 16, 0.45);
+  z-index: 5;
+}
+/* Leaving is not the same gesture as arriving: it drops back without the
+   overshoot, so the cursor never looks like it bounced off two things at once. */
+.focusable:not([data-focused='true']) {
+  transition:
+    transform 0.2s cubic-bezier(0.3, 0, 0.5, 1),
+    box-shadow 0.2s ease-out,
+    background 0.2s ease-out;
+}
+
+.titlebar {
+  -webkit-app-region: drag;
+}
+.titlebar button {
+  -webkit-app-region: no-drag;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+}
