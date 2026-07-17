@@ -133,11 +133,21 @@ export interface Collection {
   total: number
 }
 
+// A resolved shelf, kept so reopening "Show all" is instant instead of refetching a
+// few hundred products every time. Keyed by id and size, since a row (24) and its
+// full grid (all of them) are different fetches.
+const collectionCache = new Map<string, Collection>()
+
 export async function loadCollection(
   id: string,
   limit = 24,
   titleOverride?: string,
+  onProgress?: (tiles: GameTile[]) => void,
 ): Promise<Collection | null> {
+  const cacheKey = `${id}:${limit}`
+  const hit = collectionCache.get(cacheKey)
+  if (hit) return hit
+
   const res = await call({ kind: 'collection', id }).catch(() => null)
   if (!res?.ok) return null
   const arr: any[] = Array.isArray(res.data) ? res.data : res.data?.items || []
@@ -145,34 +155,33 @@ export async function loadCollection(
   const allIds = siglProductIds(arr)
   const ids = allIds.slice(0, limit)
   if (!ids.length) return null
+  const title = titleOverride || meta?.title || 'Oyunlar'
 
   // The catalogue endpoint takes a bounded batch, so a full shelf goes out as several
-  // chunks — fired together, not one after another, because a shelf of a few hundred
-  // in series is the "Show all" that sat there loading. Each is independent and any
-  // that fails just drops its slice.
+  // chunks — fired together, not one after another. And each chunk paints as it lands:
+  // a few hundred games no longer wait for the last request before anything shows, so
+  // the grid fills from the first second instead of sitting empty.
   const chunks: string[][] = []
   for (let i = 0; i < ids.length; i += 150) chunks.push(ids.slice(i, i + 150))
-  const responses = await Promise.all(
-    chunks.map((chunk) => call({ kind: 'products', productIds: chunk }).catch(() => null)),
-  )
   const byId = new Map<string, GameTile>()
-  for (const products of responses) {
-    if (products?.data?.Products) {
-      for (const t of productsToTiles(products.data.Products)) byId.set(t.productId, t)
-    }
-  }
-  const tiles = groupEditions(ids.map((pid) => byId.get(pid)).filter((t): t is GameTile => !!t))
+  const paint = (): GameTile[] =>
+    groupEditions(ids.map((pid) => byId.get(pid)).filter((t): t is GameTile => !!t))
+
+  await Promise.all(
+    chunks.map(async (chunk) => {
+      const products = await call({ kind: 'products', productIds: chunk }).catch(() => null)
+      if (products?.data?.Products) {
+        for (const t of productsToTiles(products.data.Products)) byId.set(t.productId, t)
+      }
+      onProgress?.(paint())
+    }),
+  )
+  const tiles = paint()
   if (!tiles.length) return null
 
-  // The override wins because our own label is translated; the API's meta.title comes
-  // back in the account's market language, which is not always the app's.
-  return {
-    id,
-    title: titleOverride || meta?.title || 'Oyunlar',
-    description: meta?.description,
-    tiles,
-    total: allIds.length,
-  }
+  const result = { id, title, description: meta?.description, tiles, total: allIds.length }
+  collectionCache.set(cacheKey, result)
+  return result
 }
 
 export async function loadLibrary(onBatch?: (tiles: GameTile[]) => void): Promise<GameTile[]> {

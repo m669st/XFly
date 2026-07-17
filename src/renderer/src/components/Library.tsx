@@ -30,6 +30,9 @@ export function Library(): JSX.Element {
   const [asking, setAsking] = useState<GameTile | null>(null)
   // The full-grid view a "Show all" opens onto. Null means the shelves are showing.
   const [detail, setDetail] = useState<{ title: string; tiles: GameTile[] } | null>(null)
+  // Which shelf's grid is open, read from async chunk callbacks that may resolve after
+  // the user has closed it or opened a different one.
+  const detailRef = useRef<string | null>(null)
 
   const games = useMemo(() => groupEditions(library), [library])
 
@@ -40,6 +43,7 @@ export function Library(): JSX.Element {
       if (e.key === 'Escape' || e.key === 'Backspace') {
         e.stopPropagation()
         e.preventDefault()
+        detailRef.current = null
         setDetail(null)
       }
     }
@@ -48,6 +52,7 @@ export function Library(): JSX.Element {
   }, [detail])
 
   const showAll = async (c: Collection): Promise<void> => {
+    detailRef.current = c.id
     // All games is already in memory in full — the row just shows a slice of it, so
     // open the grid on everything, not on the 24 the shelf was holding.
     if (c.id === ALL_ID) {
@@ -63,8 +68,13 @@ export function Library(): JSX.Element {
     setDetail({ title: c.title, tiles: c.tiles })
     const override =
       c.id === syog?.id ? t.library.owned : c.id === leaving?.id ? t.library.leavingSoon : undefined
-    const full = await loadCollection(c.id, 1000, override).catch(() => null)
-    if (full) setDetail({ title: c.title, tiles: full.tiles })
+    // Repaint as each chunk lands rather than waiting for the whole shelf, and remember
+    // which grid is open so a chunk that arrives after the user has moved on is ignored.
+    const opened = c.id
+    const full = await loadCollection(c.id, 1000, override, (tiles) => {
+      if (detailRef.current === opened) setDetail({ title: c.title, tiles })
+    }).catch(() => null)
+    if (full && detailRef.current === opened) setDetail({ title: c.title, tiles: full.tiles })
   }
 
   useEffect(() => {
@@ -143,7 +153,7 @@ export function Library(): JSX.Element {
       </AnimatePresence>
       {detail ? (
         <div className="flex flex-col gap-4">
-          <BackButton onPress={() => setDetail(null)} />
+          <BackButton onPress={() => { detailRef.current = null; setDetail(null) }} />
           <Grid tiles={detail.tiles} focusKey="LIBRARY_DETAIL" onPick={pick} />
         </div>
       ) : q ? (
@@ -287,30 +297,30 @@ function BackButton({ onPress }: { onPress: () => void }): JSX.Element {
   )
 }
 
-function useProgressive<T>(items: T[], { after = 450, chunk = 24 } = {}): T[] {
+// Reveal a big grid a chunk per frame so React never blocks on a thousand cards at
+// once — but never reset what's already shown. The old version waited 450ms and then
+// restarted from zero every time the list grew, which, once shelves stream in chunk by
+// chunk, meant the grid cleared and re-counted on every batch. Now it only ever climbs.
+function useProgressive<T>(items: T[], { chunk = 48 } = {}): T[] {
   const [n, setN] = useState(0)
 
   useEffect(() => {
     let cancelled = false
     let raf = 0
-    let shown = 0
-
     const step = (): void => {
       if (cancelled) return
-      shown = Math.min(items.length, shown + chunk)
-      setN(shown)
-      if (shown < items.length) raf = requestAnimationFrame(step)
+      setN((prev) => {
+        const next = Math.min(items.length, prev + chunk)
+        if (next < items.length) raf = requestAnimationFrame(step)
+        return next
+      })
     }
-
-    setN(0)
-    const t = setTimeout(step, after)
-
+    raf = requestAnimationFrame(step)
     return () => {
       cancelled = true
-      clearTimeout(t)
       cancelAnimationFrame(raf)
     }
-  }, [items.length, after, chunk])
+  }, [items.length, chunk])
 
   return useMemo(() => items.slice(0, n), [items, n])
 }
