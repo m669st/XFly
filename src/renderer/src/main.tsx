@@ -34,15 +34,22 @@ function connect(): void {
     if (ev.type === 'stream.state') useStore.getState().setStreamState(ev.state)
     else if (ev.type === 'menu.toggle') useStore.getState().toggleHud()
     else if (ev.type === 'play.denied') {
-      // The account cannot play this one. Turn around at the loading screen rather
-      // than letting it sit there — the title we were launching is the name to show.
+      // The launch will not become a stream. Turn around at the loading screen rather
+      // than leaving it to spin. The message depends on why: not owned vs. can't be
+      // started from here.
       const st = useStore.getState()
       const name = st.launching?.title
       st.setStreamState('idle')
       st.setLaunching(null)
       st.setView('home')
       window.xfly.showLauncher()
-      st.setToast(name ? fmt(t.library.notOwned, { game: name }) : t.library.notOwnedGeneric)
+      if (ev.reason === 'notCloudPlayable') {
+        st.setToast(name ? fmt(t.library.notCloudPlayable, { game: name }) : t.library.notCloudPlayableGeneric)
+      } else if (ev.reason === 'notLaunchable') {
+        st.setToast(name ? fmt(t.library.launchFailed, { game: name }) : t.library.launchFailedGeneric)
+      } else {
+        st.setToast(name ? fmt(t.library.notOwned, { game: name }) : t.library.notOwnedGeneric)
+      }
     }
     else if (ev.type === 'waittime') useStore.getState().setWaitSeconds(ev.seconds)
     else if (ev.type === 'session.state') useStore.getState().setSessionState(ev.state)

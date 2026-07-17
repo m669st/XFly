@@ -65,8 +65,12 @@ export type EngineEvent =
   | { type: 'menu.toggle' }
   /** Queue estimate for the region we are launching on, in seconds. */
   | { type: 'waittime'; seconds: number }
-  /** The account cannot play the title it just asked for — no entitlement. */
-  | { type: 'play.denied'; reason: 'notEntitled' }
+  /**
+   * The launch did not become a stream. 'notEntitled' — the account cannot play it;
+   * 'notLaunchable' — xCloud would not start it from here (e.g. an older store id that
+   * only opens the game's page).
+   */
+  | { type: 'play.denied'; reason: 'notEntitled' | 'notLaunchable' | 'notCloudPlayable' }
 
 export interface StreamStats {
   t: number
