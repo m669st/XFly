@@ -130,12 +130,17 @@ export async function loadCollection(
   const ids = allIds.slice(0, limit)
   if (!ids.length) return null
 
-  // The catalogue endpoint takes a bounded batch, so a full shelf is fetched in
-  // chunks and stitched back into the collection's own order.
+  // The catalogue endpoint takes a bounded batch, so a full shelf goes out as several
+  // chunks — fired together, not one after another, because a shelf of a few hundred
+  // in series is the "Show all" that sat there loading. Each is independent and any
+  // that fails just drops its slice.
+  const chunks: string[][] = []
+  for (let i = 0; i < ids.length; i += 150) chunks.push(ids.slice(i, i + 150))
+  const responses = await Promise.all(
+    chunks.map((chunk) => call({ kind: 'products', productIds: chunk }).catch(() => null)),
+  )
   const byId = new Map<string, GameTile>()
-  for (let i = 0; i < ids.length; i += 150) {
-    const chunk = ids.slice(i, i + 150)
-    const products = await call({ kind: 'products', productIds: chunk }).catch(() => null)
+  for (const products of responses) {
     if (products?.data?.Products) {
       for (const t of productsToTiles(products.data.Products)) byId.set(t.productId, t)
     }

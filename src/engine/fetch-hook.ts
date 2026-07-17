@@ -1,7 +1,7 @@
 import { engine, emit, log, diag } from './state'
 import { rec, redactText, headersToObject } from './record'
 import { wantedAlias } from './datachannel'
-import { OS_NAME, pickStreamLocale } from '../shared/constants'
+import { OS_NAME, XBOX_PLAY_URL, pickStreamLocale } from '../shared/constants'
 
 /** Where the page reports on the player. None of it is needed to stream a game. */
 const BLOCKED_HOSTS = [
@@ -111,6 +111,11 @@ export function patchFetch(): void {
           if (code === 'NoEntitlement') {
             diag('session', `play denied: not entitled to ${body.titleId || 'title'}`)
             emit({ type: 'play.denied', reason: 'notEntitled' })
+            // Get off the failed launch route. xCloud's router wedges on the error
+            // page — measured: the very next launch reported "ROUTER DID NOT NAVIGATE"
+            // and stayed on the game the account did not own. Returning to /play lets
+            // the following pick start clean.
+            setTimeout(() => location.assign(XBOX_PLAY_URL), 300)
             return spoofed
           }
 

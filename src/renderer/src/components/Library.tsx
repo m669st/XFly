@@ -48,9 +48,15 @@ export function Library(): JSX.Element {
   }, [detail])
 
   const showAll = async (c: Collection): Promise<void> => {
-    // A row only holds its first slice. If the collection has more, fetch the rest
-    // before opening the grid so "Show all" actually shows all of it.
-    if (c.id === ALL_ID || c.total <= c.tiles.length) {
+    // All games is already in memory in full — the row just shows a slice of it, so
+    // open the grid on everything, not on the 24 the shelf was holding.
+    if (c.id === ALL_ID) {
+      setDetail({ title: c.title, tiles: games })
+      return
+    }
+    // A real collection's row only holds its first slice; if it has more, fetch the
+    // rest before opening. Show the slice immediately so the grid is never blank.
+    if (c.total <= c.tiles.length) {
       setDetail({ title: c.title, tiles: c.tiles })
       return
     }
