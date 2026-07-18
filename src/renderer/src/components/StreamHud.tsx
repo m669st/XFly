@@ -80,7 +80,11 @@ function Menu(): JSX.Element {
   }
 
   const quit = (): void => {
-    useStore.getState().setHudOpen(false)
+    const st = useStore.getState()
+    st.setHudOpen(false)
+    // Quitting a game that was actually running replays Home's opening; bailing out
+    // before it ever started drops straight back to a lit home.
+    if (st.streamState !== 'playing') st.setHomeSkipIntro(true)
     window.xfly.engineCommand({ type: 'disconnect' })
     window.xfly.showLauncher()
   }
@@ -90,7 +94,7 @@ function Menu(): JSX.Element {
       <div className="glass w-[440px] space-y-5 rounded-2xl p-6">
         <div className="flex items-center gap-3">
           {profile?.avatarUrl ? (
-            <img src={profile.avatarUrl} alt="" className="h-12 w-12 rounded-full bg-white/10" />
+            <img src={profile.avatarUrl} alt="" decoding="async" className="h-12 w-12 rounded-full bg-white/10" />
           ) : (
             <div className="h-12 w-12 rounded-full bg-white/10" />
           )}
@@ -102,7 +106,9 @@ function Menu(): JSX.Element {
 
         {game && (
           <div className="flex items-center gap-3 rounded-xl bg-white/5 p-3">
-            {game.art && <img src={game.art} alt="" className="h-14 w-14 rounded-lg object-cover" />}
+            {game.art && (
+              <img src={game.art} alt="" decoding="async" className="h-14 w-14 rounded-lg object-cover" />
+            )}
             <div className="min-w-0">
               <div className="truncate font-medium">{game.title}</div>
               {stats && (

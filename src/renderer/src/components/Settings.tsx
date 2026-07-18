@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useStore } from '../store'
 import { Screen } from './Screen'
 import { useFocus, FocusContext } from '../lib/focus'
+import { requestQuit } from '../lib/quit'
 import { t, fmt } from '../lib/i18n'
 
 const TABS = ['video', 'region', 'controller', 'advanced'] as const
@@ -458,7 +459,7 @@ function Diagnostics(): JSX.Element {
 }
 
 function Quit(): JSX.Element {
-  const quit = (): void => window.xfly.close()
+  const quit = (): void => requestQuit()
   return (
     <Row label={t.settings.quit} onEnter={quit}>
       <Btn label={t.settings.quitButton} danger onPress={quit} />

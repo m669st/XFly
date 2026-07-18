@@ -49,7 +49,9 @@ export function EditionPicker({
           className="w-[min(30rem,90vw)] rounded-2xl border border-line bg-bg-1 p-7"
         >
           <div className="flex items-center gap-4">
-            {game.art && <img src={game.art} className="h-20 w-15 rounded-lg object-cover" />}
+            {game.art && (
+              <img src={game.art} decoding="async" className="h-20 w-15 rounded-lg object-cover" />
+            )}
             <div className="min-w-0">
               <h2 className="font-display text-xl font-bold leading-tight tracking-tight">{game.title}</h2>
               <p className="mt-1 text-[12.5px] text-ink-3">{t.edition.question}</p>

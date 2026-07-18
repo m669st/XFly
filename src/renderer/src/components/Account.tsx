@@ -55,6 +55,7 @@ export function Account({ onClose }: { onClose: () => void }): JSX.Element {
             {profile?.avatarUrl ? (
               <img
                 src={profile.avatarUrl}
+                decoding="async"
                 className="h-16 w-16 shrink-0 rounded-full border border-white/10 object-cover"
               />
             ) : (

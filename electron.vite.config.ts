@@ -81,6 +81,12 @@ export default defineConfig({
       },
     },
     plugins: [react()],
+    // The light rig runs on a worker (src/renderer/src/lib/light-worker.ts), spawned
+    // with `{ type: 'module' }` — so emit it as ESM rather than the default IIFE, and
+    // keep the declared type and the emitted format in agreement.
+    worker: {
+      format: 'es',
+    },
     build: {
       rollupOptions: {
         input: { index: resolve('src/renderer/index.html') },

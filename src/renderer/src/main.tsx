@@ -6,10 +6,12 @@ import { useStore } from './store'
 import { t, fmt } from './lib/i18n'
 import { productsToTiles } from './lib/xbox'
 import { startGamepadNavigation } from './lib/gamepad'
+import { startInputTracking } from './lib/intent'
 import './styles.css'
 
 init({ debug: false, visualDebug: false })
 startGamepadNavigation()
+startInputTracking()
 
 function connect(): void {
   if (!window.xfly) {
@@ -42,6 +44,8 @@ function connect(): void {
       st.setStreamState('idle')
       st.setLaunching(null)
       st.setView('home')
+      // The launch never became a game, so home returns already lit — no opening.
+      st.setHomeSkipIntro(true)
       window.xfly.showLauncher()
       if (ev.reason === 'notCloudPlayable') {
         st.setToast(name ? fmt(t.library.notCloudPlayable, { game: name }) : t.library.notCloudPlayableGeneric)

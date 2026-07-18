@@ -74,6 +74,17 @@ interface AppState {
   stats: Stats | null
   proxy: { gate?: string; rewritten?: number; reason?: string } | null
 
+  /** The app is shutting down — Home plays its opening in reverse before the window closes. */
+  closing: boolean
+
+  /**
+   * Next time Home mounts, show it already lit with no opening animation. Set when the
+   * user backs out of a launch that never became a game — there was nothing to leave,
+   * so there is nothing to re-reveal. Quitting an actual game leaves this false, so the
+   * opening replays. Home consumes and clears it on mount.
+   */
+  homeSkipIntro: boolean
+
   setView: (v: View) => void
   setAuth: (signedIn: boolean, profile: Profile | null) => void
 
@@ -96,6 +107,8 @@ interface AppState {
   setLaunching: (t: GameTile | null) => void
   setSelected: (t: GameTile | null) => void
   setStats: (s: Stats | null) => void
+  setClosing: () => void
+  setHomeSkipIntro: (v: boolean) => void
 }
 
 export const useStore = create<AppState>((set) => ({
@@ -118,6 +131,8 @@ export const useStore = create<AppState>((set) => ({
   selected: null,
   stats: null,
   proxy: null,
+  closing: false,
+  homeSkipIntro: false,
 
   setView: (view) => set({ view }),
 
@@ -170,4 +185,6 @@ export const useStore = create<AppState>((set) => ({
   setLaunching: (launching) => set({ launching }),
   setSelected: (selected) => set({ selected }),
   setStats: (stats) => set({ stats }),
+  setClosing: () => set({ closing: true }),
+  setHomeSkipIntro: (homeSkipIntro) => set({ homeSkipIntro }),
 }))

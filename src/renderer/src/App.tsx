@@ -9,15 +9,28 @@ import { Splash } from './components/Splash'
 import { Mark } from './components/Mark'
 import { useFocus, setFocus } from './lib/focus'
 import { t } from './lib/i18n'
-import { loadLibrary, loadRecent, loadProfile, loadMkbIds, loadEntitledIds } from './lib/xbox'
+import { sfxShutdown } from './lib/sfx'
+import { loadLibrary, loadRecent, loadProfile, loadMkbIds, loadEntitledIds, preloadShelves } from './lib/xbox'
 
 const BOOT_MAX_MS = 8_000
+// How long the reverse-opening runs before the window actually closes: the screen
+// leaves, the light goes down, the room falls dark — then it holds on black for a beat
+// so the power-down chime can resolve before the window shuts.
+const CLOSE_MS = 2_300
 
 export default function App(): JSX.Element {
   const view = useStore((s) => s.view)
   const signedIn = useStore((s) => s.signedIn)
   const booted = useStore((s) => s.booted)
   const streamState = useStore((s) => s.streamState)
+  const closing = useStore((s) => s.closing)
+
+  useEffect(() => {
+    if (!closing) return
+    sfxShutdown()
+    const id = setTimeout(() => window.xfly.close(), CLOSE_MS)
+    return () => clearTimeout(id)
+  }, [closing])
 
   useEffect(() => {
     if (signedIn === null) return
@@ -36,32 +49,40 @@ export default function App(): JSX.Element {
     loadLibrary((batch) => useStore.getState().mergeLibrary(batch)).catch(() => {})
     loadMkbIds().then((ids) => ids.size && useStore.getState().setMkbIds(ids)).catch(() => {})
     loadEntitledIds().then((ids) => ids.size && useStore.getState().setEntitledIds(ids)).catch(() => {})
+    // Warm the Library shelves now, from the home screen, so opening Library is instant.
+    preloadShelves()
   }, [signedIn])
 
   const inGame = streamState === 'playing' || streamState === 'starting' || streamState === 'loading'
-
-  if (signedIn === null) return <Splash status={t.boot.starting} />
-  if (signedIn && !booted) return <Splash status={t.boot.loadingAccount} />
+  const showSplash = signedIn === null || (signedIn && !booted)
 
   return (
     <div className="relative h-full w-full">
       <Toast />
-      {inGame ? (
-        <StreamHud />
-      ) : !signedIn ? (
-        <div className="relative z-10 h-full">
-          <div className="xfly-bg" />
-          <SignIn />
-        </div>
-      ) : (
-        <div className="relative z-10 h-full">
-          <Home />
-          <AnimatePresence>
-            {view === 'library' && <Library key="library" />}
-            {view === 'settings' && <Settings key="settings" />}
-          </AnimatePresence>
-        </div>
-      )}
+      {/* Home mounts under the splash while it fades, so its own dark-to-light intro
+          begins the moment the loader lifts — one continuous rise from black. */}
+      {!showSplash &&
+        (inGame ? (
+          <StreamHud />
+        ) : !signedIn ? (
+          <div className="relative z-10 h-full">
+            <div className="xfly-bg" />
+            <SignIn />
+          </div>
+        ) : (
+          <div className="relative z-10 h-full">
+            <Home />
+            <AnimatePresence>
+              {view === 'library' && <Library key="library" />}
+              {view === 'settings' && <Settings key="settings" />}
+            </AnimatePresence>
+          </div>
+        ))}
+      <AnimatePresence>
+        {showSplash && (
+          <Splash key="splash" status={signedIn === null ? t.boot.starting : t.boot.loadingAccount} />
+        )}
+      </AnimatePresence>
     </div>
   )
 }

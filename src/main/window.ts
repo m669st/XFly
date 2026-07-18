@@ -87,6 +87,9 @@ export class XFlyWindow {
 
         sandbox: false,
         transparent: true,
+        // The launcher's own sounds (startup swell, moves) should be able to play the
+        // moment the window opens, before any click reaches this view.
+        autoplayPolicy: 'no-user-gesture-required',
       },
     })
     this.overlay.setBackgroundColor('#00000000')
@@ -124,6 +127,11 @@ export class XFlyWindow {
     this.xcloud.webContents.on('render-process-gone', (_e, details) =>
       diagWrite('page', `RENDERER GONE: ${details.reason} (exit ${details.exitCode})`),
     )
+    // The launcher UI is a separate renderer, so its console does not reach here on its
+    // own. Forward just the diagnostic lines it deliberately prints.
+    this.overlay.webContents.on('console-message', (_e, _level, message) => {
+      if (message.includes('[XFLY-LAYOUT]') || message.includes('[XFLY-RIG]')) diagWrite('ui', message)
+    })
     this.xcloud.webContents.on('unresponsive', () => diagWrite('page', 'renderer unresponsive'))
 
 

@@ -39,6 +39,16 @@ function dominant(data: Uint8ClampedArray): Ambient {
   return { rgb: [nr, ng, nb].map((c) => Math.round(Math.min(1, c) * 255)).join(', ') }
 }
 
+const S = 48
+
+/**
+ * The accent colour a piece of key art gives off.
+ *
+ * The decode is the expensive part — a full-size hero is millions of pixels, and doing
+ * that on the main thread showed up as a hitch in the opening. createImageBitmap
+ * decodes *and* downscales off-thread, so what reaches this thread is already a 48×48
+ * thumbnail and the sampling below is trivial. Older paths fall back to an <img>.
+ */
 export async function ambientFrom(url: string | undefined): Promise<Ambient> {
   if (!url) return FALLBACK
   const hit = cache.get(url)
@@ -49,19 +59,38 @@ export async function ambientFrom(url: string | undefined): Promise<Ambient> {
     return a
   }
 
-  try {
-    const img = new Image()
-    img.crossOrigin = 'anonymous'
-    img.src = url
-    await img.decode()
-    const S = 48
+  const sample = (src: CanvasImageSource): Ambient => {
     const c = document.createElement('canvas')
     c.width = S
     c.height = S
     const ctx = c.getContext('2d', { willReadFrequently: true })
-    if (!ctx) return done(FALLBACK)
-    ctx.drawImage(img, 0, 0, S, S)
-    return done(dominant(ctx.getImageData(0, 0, S, S).data))
+    if (!ctx) return FALLBACK
+    ctx.drawImage(src, 0, 0, S, S)
+    return dominant(ctx.getImageData(0, 0, S, S).data)
+  }
+
+  try {
+    const res = await fetch(url, { mode: 'cors' })
+    if (!res.ok) throw new Error('fetch failed')
+    const bmp = await createImageBitmap(await res.blob(), {
+      resizeWidth: S,
+      resizeHeight: S,
+      resizeQuality: 'low',
+    })
+    const out = sample(bmp)
+    bmp.close()
+    return done(out)
+  } catch {
+    // fall through to the <img> path
+  }
+
+  try {
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.decoding = 'async'
+    img.src = url
+    await img.decode()
+    return done(sample(img))
   } catch {
     return done(FALLBACK)
   }

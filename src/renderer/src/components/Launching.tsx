@@ -50,6 +50,7 @@ export function Launching(): JSX.Element {
       {(game?.hero || game?.art) && (
         <motion.img
           src={game.hero || game.art}
+          decoding="async"
           initial={{ scale: 1, opacity: 0.22 }}
           animate={{ scale: [1, 1.1, 1.13], opacity: 0.5 }}
           transition={{
@@ -185,6 +186,9 @@ function Chip({ children }: { children: React.ReactNode }): JSX.Element {
 
 function Cancel(): JSX.Element {
   const cancel = (): void => {
+    // Backing out of a launch that never became a game — drop straight to a lit home,
+    // no opening animation.
+    useStore.getState().setHomeSkipIntro(true)
     window.xfly.engineCommand({ type: 'disconnect' })
     window.xfly.showLauncher()
   }

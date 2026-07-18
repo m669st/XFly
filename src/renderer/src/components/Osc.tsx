@@ -47,6 +47,12 @@ export function Osc({
         e.preventDefault()
         onClose()
       } else if (e.key === 'Enter') {
+        // The pad's A button arrives here too — the gamepad layer dispatches it as a
+        // synthetic Enter (keyCode 0). That one must reach the spatial-navigation layer
+        // so it presses the *focused* key (type a letter, backspace, ✓). Only a real
+        // keyboard's Enter (a genuine keyCode) means "done" and closes. Swallowing the
+        // synthetic one here was closing the keyboard before any letter could be typed.
+        if (!e.keyCode) return
         e.stopPropagation()
         e.preventDefault()
         latest.current.onClose()

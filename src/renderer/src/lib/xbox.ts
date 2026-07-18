@@ -112,6 +112,19 @@ export async function loadEntitledIds(): Promise<Set<string>> {
 export const LEAVING_SOON_COLLECTION = '393f05bf-e596-4ef6-9487-6d4fa0eab987'
 
 /**
+ * Warm every library shelf into the cache from wherever the app happens to be —
+ * home, settings, anywhere — so opening Library is instant instead of loading then.
+ * loadCollection caches by id and size, and the labels match what Library asks for,
+ * so its own calls just read these back. Fire-and-forget; failures are the row's
+ * problem when it renders.
+ */
+export function preloadShelves(): void {
+  void loadCollection(SYOG_COLLECTION, 24, t.library.owned).catch(() => {})
+  void loadCollection(LEAVING_SOON_COLLECTION, 24, t.library.leavingSoon).catch(() => {})
+  for (const id of STORE_COLLECTIONS) void loadCollection(id).catch(() => {})
+}
+
+/**
  * The games xCloud lists as playing natively with a keyboard and mouse. Most cloud
  * titles expect a pad and only fake keyboard support; this is the shortlist that
  * genuinely takes one, so the card can say so.

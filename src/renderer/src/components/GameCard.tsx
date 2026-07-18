@@ -41,6 +41,7 @@ export function GameCard({
         <img
           src={wide && tile.hero ? tile.hero : tile.art}
           loading="lazy"
+          decoding="async"
           className="h-full w-full object-cover"
         />
       ) : (

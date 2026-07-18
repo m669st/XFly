@@ -35,7 +35,13 @@ export function Screen({
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape' || e.key === 'Backspace') back()
+      if (e.key !== 'Escape' && e.key !== 'Backspace') return
+      // Backspace in the search box means delete a letter, not leave the screen. If a
+      // text field has focus, it owns the key — this is what was throwing the user out
+      // to the home screen mid-search.
+      const el = document.activeElement as HTMLElement | null
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return
+      back()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
