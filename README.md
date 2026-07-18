@@ -68,11 +68,15 @@ it asks for two switches of its own and nobody has run it on a Radeon yet — se
 Not the 1440p ceiling — a 720p stream, rebuilt on the way to the screen. What the upscaler does is
 easiest to see when it has the least to work with.
 
-<img src="screenshots/vsr-gameplay.png" alt="Forza Horizon 6 — a 720p stream rebuilt by RTX VSR" width="820">
+<img src="screenshots/vsr-gameplay.png" alt="Forza Horizon 6 — a 720p stream upscaled by RTX VSR" width="820">
+
+<sub><b>720p stream, upscaled by RTX VSR.</b> Straight capture — not a 1440p source.</sub>
 
 <br>
 
-<img src="screenshots/vsr-loading.png" alt="Forza Horizon 6 — a 720p stream rebuilt by RTX VSR" width="820">
+<img src="screenshots/vsr-loading.png" alt="Forza Horizon 6 — a 720p stream upscaled by RTX VSR" width="820">
+
+<sub><b>720p stream, upscaled by RTX VSR.</b> Straight capture — not a 1440p source.</sub>
 
 </div>
 
