@@ -61,6 +61,19 @@ it asks for two switches of its own and nobody has run it on a Radeon yet — se
 
 <img src="screenshots/ingame.png" alt="XFly in-game, with RTX VSR and with the XFly upscaler" width="820">
 
+<br><br>
+
+### And this is 720p.
+
+Not the 1440p ceiling — a 720p stream, rebuilt on the way to the screen. What the upscaler does is
+easiest to see when it has the least to work with.
+
+<img src="screenshots/vsr-gameplay.png" alt="Forza Horizon 6 — a 720p stream rebuilt by RTX VSR" width="820">
+
+<br>
+
+<img src="screenshots/vsr-loading.png" alt="Forza Horizon 6 — a 720p stream rebuilt by RTX VSR" width="820">
+
 </div>
 
 **No RTX or Radeon?** XFly does the cleanup itself, on any machine — so the picture still arrives
