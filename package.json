@@ -1,6 +1,6 @@
 {
   "name": "xfly",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Xbox Cloud Gaming, as a console — not a browser tab.",
   "main": "./out/main/index.js",
   "author": "XFly",
