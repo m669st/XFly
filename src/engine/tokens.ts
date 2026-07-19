@@ -1,8 +1,24 @@
 import { emit, diag } from './state'
 
 function relayLocale(): void {
-  const language = document.documentElement.lang || navigator.language || 'en-US'
-  const market = (navigator.language || 'en-US').split('-')[1] || 'US'
+  // The market has to be a two-letter country the catalog knows. Splitting the locale
+  // on '-' is not that: es-419 (Latin America) yields "419", zh-Hant-TW yields "Hant",
+  // and the catalog answers both with 404s — which is an empty library forever, and
+  // exactly what the first non-two-part-locale users hit. Intl knows how to find the
+  // region subtag properly; anything that still isn't two letters falls back to US.
+  const raw = navigator.language || 'en-US'
+  let market = 'US'
+  try {
+    const region = new Intl.Locale(raw).maximize().region || ''
+    if (/^[A-Z]{2}$/.test(region)) market = region
+  } catch {
+    /* an unparseable locale is a fallback, not a failure */
+  }
+  const candidate = document.documentElement.lang || raw
+  // The catalog is equally strict about language: it wants ll-CC. A locale it does
+  // not recognise turns every products call into a 400.
+  const language = /^[a-z]{2,3}-[A-Z]{2}$/.test(candidate) ? candidate : 'en-US'
+  diag('tokens', `locale: market=${market} language=${language} (from ${raw})`)
   emit({ type: 'tokens' as any, tokens: { market, language } } as any)
 }
 

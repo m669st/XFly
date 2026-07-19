@@ -7,7 +7,7 @@ import {
   EDGE_DESKTOP_USER_AGENT,
 } from '@shared/constants'
 import { IPC } from '@shared/ipc'
-import { setupXboxSession, setXboxUserAgent, xboxUserAgent, clearXboxSession } from './session'
+import { setupXboxSession, setXboxUserAgent, xboxUserAgent, clearXboxSession, setOnRegionBlocked } from './session'
 import { settings } from './settings'
 import { diagWrite } from './diag'
 import { redactUrl } from './redact'
@@ -176,6 +176,13 @@ export class XFlyWindow {
       if (input.type === 'keyDown' && (input.key === 'F8' || (input.key === 'Escape' && input.shift))) {
         this.isOverlayVisible ? this.hideOverlay() : this.showOverlay()
       }
+    })
+
+    // When a login is refused for region, the session turns the bypass on and asks for
+    // one reload so the retried login carries the disguise.
+    setOnRegionBlocked(() => {
+      if (this.streaming) return
+      void this.xcloud.webContents.loadURL(XBOX_PLAY_URL).catch(() => {})
     })
 
     void this.xcloud.webContents.loadURL(XBOX_PLAY_URL)

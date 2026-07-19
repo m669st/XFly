@@ -10,7 +10,7 @@ import { Mark } from './components/Mark'
 import { useFocus, setFocus } from './lib/focus'
 import { t } from './lib/i18n'
 import { sfxShutdown } from './lib/sfx'
-import { loadLibrary, loadRecent, loadProfile, loadMkbIds, loadEntitledIds, preloadShelves } from './lib/xbox'
+import { loadLibrary, loadRecent, loadProfile, loadMkbIds, preloadShelves } from './lib/xbox'
 
 const BOOT_MAX_MS = 8_000
 // How long the reverse-opening runs before the window actually closes: the screen
@@ -48,7 +48,6 @@ export default function App(): JSX.Element {
 
     loadLibrary((batch) => useStore.getState().mergeLibrary(batch)).catch(() => {})
     loadMkbIds().then((ids) => ids.size && useStore.getState().setMkbIds(ids)).catch(() => {})
-    loadEntitledIds().then((ids) => ids.size && useStore.getState().setEntitledIds(ids)).catch(() => {})
     // Warm the Library shelves now, from the home screen, so opening Library is instant.
     preloadShelves()
   }, [signedIn])

@@ -1,5 +1,5 @@
 import { useStore, type GameTile, type Profile } from '../store'
-import { t, fmt } from './i18n'
+import { t } from './i18n'
 
 type ApiResult = { ok: boolean; status: number; data: any }
 
@@ -77,12 +77,14 @@ function siglProductIds(data: any): string[] {
   return arr.map((x) => x?.id).filter((id) => typeof id === 'string' && id.length > 4)
 }
 
+// Note: 31ff2361-…-f4f1abb4ad1b is deliberately absent. The server titles it "Leaving
+// soon" and returns the exact same games as LEAVING_SOON_COLLECTION below, so listing
+// it here rendered the Leaving soon shelf twice. The dedicated row handles it.
 export const STORE_COLLECTIONS = [
-  '6a589fa0-d493-472b-8e20-3813699d7056',
-  '06323672-b8c8-43cc-b0de-32d5a9834749',
-  '31ff2361-2772-4622-849b-f4f1abb4ad1b',
-  '66ec875c-a391-44f5-9a54-a28bd6f976ce',
-  '3aa7a358-f15b-476b-af7e-134a250c08a0',
+  '6a589fa0-d493-472b-8e20-3813699d7056', // Most popular on cloud
+  '06323672-b8c8-43cc-b0de-32d5a9834749', // Recently added
+  '66ec875c-a391-44f5-9a54-a28bd6f976ce', // Ubisoft+ Classics
+  '3aa7a358-f15b-476b-af7e-134a250c08a0', // Play with mouse and keyboard
 ]
 
 /**
@@ -92,21 +94,6 @@ export const STORE_COLLECTIONS = [
  * that the page no longer uses.
  */
 export const SYOG_COLLECTION = 'e78d9a61-5ef4-43af-b400-edba1250b18e'
-
-/**
- * The product ids streamable on a subscription in this market — the union across
- * every tier. A game absent from this is one no subscription covers, so launching it
- * would be denied; the launcher checks against this before it ever calls play.
- */
-export async function loadEntitledIds(): Promise<Set<string>> {
-  const res = await call({ kind: 'subscriptions' }).catch(() => null)
-  if (!res?.ok || !res.data || typeof res.data !== 'object') return new Set()
-  const ids = new Set<string>()
-  for (const tier of Object.values(res.data as Record<string, unknown>)) {
-    if (Array.isArray(tier)) for (const id of tier) if (typeof id === 'string') ids.add(id)
-  }
-  return ids
-}
 
 /** Games about to leave Game Pass — worth surfacing so they are not missed. */
 export const LEAVING_SOON_COLLECTION = '393f05bf-e596-4ef6-9487-6d4fa0eab987'
@@ -271,17 +258,12 @@ export async function loadProfile(known?: Profile): Promise<Profile> {
 export function launch(tile: GameTile): void {
   const st = useStore.getState()
 
-  // Turn the user around before the console is ever asked for. A game no subscription
-  // covers would come back 400 NoEntitlement and hang the loading screen; checking the
-  // entitlement list here means it never gets that far. Only gate when the list
-  // actually loaded — an empty set means the check is unavailable, not that nothing
-  // is owned — and pass any edition, since owning one is enough.
-  const ids = tile.editions?.length ? tile.editions.map((e) => e.productId) : [tile.productId]
-  if (st.entitledIds.size > 0 && !ids.some((id) => st.entitledIds.has(id))) {
-    st.setToast(fmt(t.library.notOwned, { game: tile.title }))
-    return
-  }
-
+  // No pre-check. The obvious one — "is this in the subscription catalogue?" — was
+  // wrong: a game the user bought outright is owned but is in no subscription tier, so
+  // that test called it unowned and blocked the launch ("I bought it, it says I
+  // don't"). The play call is the only thing that actually knows: a game no one can
+  // stream comes back NoEntitlement, and the engine already catches that and turns the
+  // user around at the loading screen with the same message. So let every pick try.
   st.setLaunching(tile)
   window.xfly.engineCommand({ type: 'launch', productId: tile.productId, title: tile.title })
 }

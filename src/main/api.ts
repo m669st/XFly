@@ -7,14 +7,6 @@ export type ApiSpec =
   | { kind: 'recentlyPlayed' }
   | { kind: 'products'; productIds: string[] }
   | { kind: 'collection'; id: string }
-  /**
-   * Which product ids can be streamed on a subscription in this market, grouped by
-   * tier (pc, console, ultimate, eaaccess, …). Verified against a live account: a
-   * game the account was denied at play time is absent here, a game it could play is
-   * present. So it is the entitlement check the launcher never had — read once, not
-   * per launch.
-   */
-  | { kind: 'subscriptions' }
   | { kind: 'profile' }
   /**
    * The account photo, without an account.
@@ -74,10 +66,6 @@ export async function apiRequest(spec: ApiSpec): Promise<unknown> {
         `&subscriptionContext=none&platformContext=${encodeURIComponent('Cloud:XGPUWEB')}`
       auth = 'none'
       break
-    case 'subscriptions':
-      url = `https://catalog.gamepass.com/subscriptions?subscription=all&market=${market}`
-      auth = 'none'
-      break
     case 'profile':
       url = 'https://profile.xboxlive.com/users/me/profile/settings?settings=Gamertag,GameDisplayName,GameDisplayPicRaw,Gamerscore'
       auth = 'xbl3'
@@ -110,11 +98,55 @@ export async function apiRequest(spec: ApiSpec): Promise<unknown> {
     headers['Referer'] = 'https://www.xbox.com/'
   }
 
-  const res = await net.fetch(url, {
-    method,
-    headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  })
+  const fire = (u: string): Promise<Response> =>
+    net.fetch(u, {
+      method,
+      headers,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    })
+
+  // A body can only be read once, so read it here and let the emptiness check and the
+  // final parse share the same text.
+  const fireRead = async (u: string): Promise<{ r: Response; txt: string }> => {
+    const r = await fire(u)
+    return { r, txt: await r.text() }
+  }
+
+  let { r: res, txt: text } = await fireRead(url)
+
+  // The catalog fails a library three ways, and all of them look the same to the user:
+  // a screen that never loads. An unfamiliar market or language is rejected outright
+  // (400/404); a busy one times out (5xx); and — the one that hid for a while — some
+  // markets that DO exist (Taiwan, Hong Kong, Turkey) answer 200 with an empty
+  // catalogue. So: a server error gets one retry, and anything still unanswered — a
+  // rejection, a timeout, or an empty 200 — is tried once more as the US store in
+  // English. A library in the wrong language beats no library, and US always answers.
+  if (url.includes('catalog.gamepass.com')) {
+    if (res.status >= 500) {
+      await new Promise((r) => setTimeout(r, 900))
+      ;({ r: res, txt: text } = await fireRead(url))
+      diagWrite('api', `${spec.kind} retried after 5xx -> ${res.status}`)
+    }
+    const emptyCatalog = (t2: string): boolean => {
+      try {
+        const j = JSON.parse(t2)
+        if (Array.isArray(j)) return j.filter((x) => x && x.id).length === 0
+        const p = j?.Products || j?.products
+        if (p) return (Array.isArray(p) ? p.length : Object.keys(p).length) === 0
+      } catch {
+        /* unparseable — not our call to force a fallback on */
+      }
+      return false
+    }
+    const rejected = res.status === 400 || res.status === 404 || res.status >= 500 || (res.ok && emptyCatalog(text))
+    if (rejected && (market !== 'US' || language !== 'en-US')) {
+      const us = url
+        .replace(`market=${market}`, 'market=US')
+        .replace(`language=${language}`, 'language=en-US')
+      ;({ r: res, txt: text } = await fireRead(us))
+      diagWrite('api', `${spec.kind} market=${market} empty/failed — US fallback -> ${res.status}`)
+    }
+  }
 
   if (!res.ok) {
     const had =
@@ -122,7 +154,6 @@ export async function apiRequest(spec: ApiSpec): Promise<unknown> {
     diagWrite('api', `${spec.kind} -> ${res.status} ${res.statusText} (auth=${auth}, token=${had})`)
   }
 
-  const text = await res.text()
   try {
     return { ok: res.ok, status: res.status, data: JSON.parse(text) }
   } catch {

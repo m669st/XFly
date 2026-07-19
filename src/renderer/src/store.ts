@@ -58,9 +58,6 @@ interface AppState {
   /** Product ids that take a keyboard and mouse natively, for the card badge. */
   mkbIds: Set<string>
 
-  /** Product ids a subscription can stream. Empty until loaded; empty means don't gate. */
-  entitledIds: Set<string>
-
   /** Queue estimate for this launch, seconds. Null until the region answers. */
   waitSeconds: number | null
 
@@ -100,7 +97,6 @@ interface AppState {
   toggleHud: () => void
   setToast: (v: string | null) => void
   setMkbIds: (v: Set<string>) => void
-  setEntitledIds: (v: Set<string>) => void
   setWaitSeconds: (v: number | null) => void
   setSessionState: (s: string | null) => void
   setRegions: (r: AppState['regions']) => void
@@ -123,7 +119,6 @@ export const useStore = create<AppState>((set) => ({
   hudOpen: false,
   toast: null,
   mkbIds: new Set(),
-  entitledIds: new Set(),
   waitSeconds: null,
   sessionState: null,
   regions: [],
@@ -177,7 +172,6 @@ export const useStore = create<AppState>((set) => ({
   setHudOpen: (hudOpen) => set({ hudOpen }),
   setToast: (toast) => set({ toast }),
   setMkbIds: (mkbIds) => set({ mkbIds }),
-  setEntitledIds: (entitledIds) => set({ entitledIds }),
   setWaitSeconds: (waitSeconds) => set({ waitSeconds }),
   toggleHud: () => set((s) => ({ hudOpen: !s.hudOpen })),
   setSessionState: (sessionState) => set({ sessionState }),
